@@ -2,30 +2,47 @@ var db = {};
 var processed_images = {};
 var idb = {};
 var twins = {};
-const api_key = ""; //REDACTED
+const api = FlickrAPI(); // KEY REDACTED
 
-const getImageFavorites = async (api_key, photo_id, page) => {
-  if (!page) {
-    page = 1;
+class FlickrAPI {
+  constructor(api_key) {
+    if (api_key) {
+      this.setAPIKey(api_key);
+    } else if (window.localStorage["api_key"]) {
+      this.api_key = window.localStorage["api_key"];
+    }
   }
-  const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1"
-  const method = "&method=flickr.photos.getFavorites&per_page=50"
-  const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${api_key}`
-  const rest_response = await fetch(rest_url);
-  const response_json = await rest_response.json(); //extract JSON from the http response
-  return response_json;
-}
 
-const getUserFavorites = async (api_key, user_id, page) => {
-  if (!page) {
-    page = 1;
+  setAPIKey(api_key) {
+    this.api_key = api_key;
+    window.localStorage["api_key"] = api_key;
   }
-  const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1"
-  const method = "&method=flickr.favorites.getPublicList&per_page=500"
-  const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${api_key}`
-  const rest_response = await fetch(rest_url);
-  const response_json = await rest_response.json(); //extract JSON from the http response
-  return response_json;
+  
+  checkAPIKey() {
+    if (!(this.api_key && this.api_key.length > 5)) {
+      throw new Error("No API key set")
+    }
+  }
+  
+  async getImageFavorites (photo_id, page = 1) {
+    this.checkAPIKey();
+    const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
+    const method = "&method=flickr.photos.getFavorites&per_page=50";
+    const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${this.api_key}`;
+    const rest_response = await fetch(rest_url);
+    const response_json = await rest_response.json(); //extract JSON from the http response
+    return response_json;
+  }
+
+  async getUserFavorites (user_id, page = 1) {
+    this.checkAPIKey();
+    const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
+    const method = "&method=flickr.favorites.getPublicList&per_page=500";
+    const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${this.api_key}`;
+    const rest_response = await fetch(rest_url);
+    const response_json = await rest_response.json(); //extract JSON from the http response
+    return response_json;
+  }
 }
 
 function addToDB(response) {
@@ -73,11 +90,11 @@ const processPhotos = (photo_ids) => {
       continue;
     }
     processed_images[photo_id] = true;
-    getImageFavorites(api_key, photo_id).then((response) => {
+    api.getImageFavorites(photo_id).then((response) => {
       const pages = response.photo.pages;
       total_pages += pages - 1 // 1 page is already accounted for 
       for (let i = 2; i <= pages; i++) {
-        getImageFavorites(api_key, photo_id, i).then((response) => {
+        api.getImageFavorites(photo_id, i).then((response) => {
           addToDB(response);
           pages_processed += 1;
           update(photos_processed, total_photos, pages_processed, total_pages);
@@ -121,14 +138,14 @@ const processUsers = (user_ids) => {
   let total_pages = total_users;
   let pages_processed = 0;
   for (const user_id of user_ids) {
-    getUserFavorites(api_key, user_id).then((response) => {
+    api.getUserFavorites(user_id).then((response) => {
       const pages = response.photos.pages > 50 ? 50 : response.photos.pages;
       if (response.photos.pages > 50) {
         console.warn(`user ${user_id} `)
       }
       total_pages += pages - 1 // 1 page is already accounted for 
       for (let i = 2; i <= pages; i++) {
-        getUserFavorites(api_key, user_id, i).then((response) => {
+        api.getUserFavorites(user_id, i).then((response) => {
           addToIDB(response);
           pages_processed += 1;
           update(users_processed, total_users, pages_processed, total_pages)
