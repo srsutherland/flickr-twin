@@ -184,29 +184,6 @@ const processPhotos = (photo_ids) => {
   }
 }
 
-function addToIDB(response) {
-  if (response.stat !== "ok") {
-    console.log(response.stat)
-    return;
-  }
-  const photos = response.photos.photo
-  for (const photo of photos) {
-    const id = photo.id;
-    if (idb[id] === undefined) {
-      idb[id] = {
-        id: photo.id,
-        owner: photo.owner,
-        secret: photo.secret,
-        server: photo.server,
-        url: `https://www.flickr.com/photos/${photo.owner}/${photo.id}/`,
-        imgUrl: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`,
-        favecount: 0,
-      }
-    }
-    idb[id].favecount += 1;
-  }
-}
-
 // eslint-disable-next-line no-unused-vars
 const processUsers = (user_ids) => {
   const total_users = user_ids.length;
@@ -222,12 +199,12 @@ const processUsers = (user_ids) => {
       total_pages += pages - 1 // 1 page is already accounted for 
       for (let i = 2; i <= pages; i++) {
         api.getUserFavorites(user_id, i).then((response) => {
-          addToIDB(response);
+          idb.add(response);
           pages_processed += 1;
           update(users_processed, total_users, pages_processed, total_pages)
         })
       }
-      addToIDB(response);
+      idb.add(response);
       users_processed += 1;
       pages_processed += 1;
       update(users_processed, total_users, pages_processed, total_pages);
