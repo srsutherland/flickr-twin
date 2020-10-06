@@ -155,61 +155,69 @@ const update = (inputs_processed, total_inputs, pages_processed, total_pages) =>
 }
 
 // eslint-disable-next-line no-unused-vars
-const processPhotos = (photo_ids) => {
+const processPhotos = async (photo_ids) => {
   const total_photos = photo_ids.length;
   let photos_processed = 0;
   let total_pages = total_photos;
   let pages_processed = 0;
+  const first_page_promises = []
+  const remaining_promises = []
   for (const photo_id of photo_ids) {
     if (processed_images[photo_id] === true) {
       console.warn(`${photo_id} already processed`);
       continue;
     }
     processed_images[photo_id] = true;
-    api.getImageFavorites(photo_id).then((response) => {
+    first_page_promises.push(api.getImageFavorites(photo_id).then((response) => {
       const pages = response.photo.pages;
       total_pages += pages - 1 // 1 page is already accounted for 
       for (let i = 2; i <= pages; i++) {
-        api.getImageFavorites(photo_id, i).then((response) => {
+        remaining_promises.push(api.getImageFavorites(photo_id, i).then((response) => {
           udb.add(response);
           pages_processed += 1;
           update(photos_processed, total_photos, pages_processed, total_pages);
-        })
+        }));
       }
       udb.add(response);
       photos_processed += 1;
       pages_processed += 1;
       update(photos_processed, total_photos, pages_processed, total_pages);
-    })
+    }));
   }
+  await Promise.allSettled(first_page_promises);
+  await Promise.allSettled(remaining_promises);
 }
 
 // eslint-disable-next-line no-unused-vars
-const processUsers = (user_ids) => {
+const processUsers = async (user_ids) => {
   const total_users = user_ids.length;
   let users_processed = 0;
   let total_pages = total_users;
   let pages_processed = 0;
+  const first_page_promises = []
+  const remaining_promises = []
   for (const user_id of user_ids) {
-    api.getUserFavorites(user_id).then((response) => {
+    first_page_promises.push(api.getUserFavorites(user_id).then((response) => {
       const pages = response.photos.pages > 50 ? 50 : response.photos.pages;
       if (response.photos.pages > 50) {
         console.warn(`user ${user_id} `)
       }
       total_pages += pages - 1 // 1 page is already accounted for 
       for (let i = 2; i <= pages; i++) {
-        api.getUserFavorites(user_id, i).then((response) => {
+        remaining_promises.push(api.getUserFavorites(user_id, i).then((response) => {
           idb.add(response);
           pages_processed += 1;
           update(users_processed, total_users, pages_processed, total_pages)
-        })
+        }))
       }
       idb.add(response);
       users_processed += 1;
       pages_processed += 1;
       update(users_processed, total_users, pages_processed, total_pages);
-    })
+    }))
   }
+  await Promise.allSettled(first_page_promises);
+  await Promise.allSettled(remaining_promises);
 }
 
 // eslint-disable-next-line no-unused-vars
