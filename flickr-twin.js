@@ -18,14 +18,14 @@ class FlickrAPI {
     this.api_key = api_key;
     window.localStorage["api_key"] = api_key;
   }
-  
+
   checkAPIKey() {
     if (!(this.api_key && this.api_key.length > 5)) {
       throw new Error("No API key set")
     }
   }
-  
-  async getImageFavorites (photo_id, page = 1) {
+
+  async getImageFavorites(photo_id, page = 1) {
     this.checkAPIKey();
     const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
     const method = "&method=flickr.photos.getFavorites&per_page=50";
@@ -35,7 +35,7 @@ class FlickrAPI {
     return response_json;
   }
 
-  async getUserFavorites (user_id, page = 1) {
+  async getUserFavorites(user_id, page = 1) {
     this.checkAPIKey();
     const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
     const method = "&method=flickr.favorites.getPublicList&per_page=500";
@@ -54,7 +54,7 @@ class FavesDatabase {
   }
 
   sortedList(max_count) {
-    return Object.values(this.db).sort((a, b) => {return b.favecount - a.favecount;}).slice(0, max_count)
+    return Object.values(this.db).sort((a, b) => { return b.favecount - a.favecount; }).slice(0, max_count)
   }
 
   trimmedDB(min_faves = 2) {
@@ -68,7 +68,7 @@ class FavesDatabase {
   }
 
   store() {
-    window.localStorage[this.storageKey] = JSON.stringify(this.db) 
+    window.localStorage[this.storageKey] = JSON.stringify(this.db)
   }
 
   load() {
@@ -89,7 +89,7 @@ class UserDatabase extends FavesDatabase {
       realname: person.realname,
       username: person.username,
       buddyicon: person.iconserver > 0 ?
-        `http://farm${person.iconfarm}.staticflickr.com/${person.iconserver}/buddyicons/${person.nsid}.jpg` : 
+        `http://farm${person.iconfarm}.staticflickr.com/${person.iconserver}/buddyicons/${person.nsid}.jpg` :
         "https://www.flickr.com/images/buddyicon.gif",
       faves: {},
       favecount: 0,
@@ -221,52 +221,54 @@ const processUsers = async (user_ids) => {
 }
 
 // eslint-disable-next-line no-unused-vars
-function print_results(max_count = 100) {
-  let twins_list = udb.sortedList(max_count);
-
-  for (const twin of twins_list) { 
-    const favecount = twin.favecount
-    const name = twin.realname?twin.realname:twin.username
-    const nsid = twin.nsid
-    console.log(`${favecount}: ${name} (https://www.flickr.com/photos/${nsid}/favorites)`)
-  }
-}
-
-// eslint-disable-next-line no-unused-vars
-function displayImages(max_count = 100) {
-  document.body.innerHTML = ""; 
-  for (const img of idb.sortedList(max_count)) { 
-    document.body.innerHTML += `<a href="${img.url}">${img.favecount}<img src="${img.imgUrl}"></a>`
-  }
-}
-
-// eslint-disable-next-line no-unused-vars
-function displayUnseenImages(max_count = 100) {
-  document.body.innerHTML = ""; 
-  let total = 0;
-  for (const img of idb.sortedList(10000)) { 
-    if (!processed_images[img.id]) {
-      document.body.innerHTML += `<a href="${img.url}">${img.favecount}<img src="${img.imgUrl}"></a>`
-      total++
-    }
-    if (total >= max_count) break;
-  }
-}
-
-// eslint-disable-next-line no-unused-vars
-function processUsersFromDB() {
-  let u = []; 
-  for (const i of udb.sortedList(50)){
+async function processUsersFromDB() {
+  let u = [];
+  for (const i of udb.sortedList(50)) {
     u.push(i.nsid)
   }
-  processUsers(u);
+  await processUsers(u);
+}
+
+class Renderer {
+  print_results(max_count = 30) {
+    let twins_list = udb.sortedList(max_count);
+
+    for (const twin of twins_list) {
+      const favecount = twin.favecount
+      const name = twin.realname ? twin.realname : twin.username
+      const nsid = twin.nsid
+      console.log(`${favecount}: ${name} (https://www.flickr.com/photos/${nsid}/favorites)`)
+    }
+  }
+
+  displayImages(max_count = 100) {
+    document.body.innerHTML = "";
+    for (const img of idb.sortedList(max_count)) {
+      document.body.innerHTML += `<a href="${img.url}">${img.favecount}<img src="${img.imgUrl}"></a>`
+    }
+  }
+
+  displayUnseenImages(max_count = 100) {
+    document.body.innerHTML = "";
+    let total = 0;
+    for (const img of idb.sortedList(10000)) {
+      if (!processed_images[img.id]) {
+        document.body.innerHTML += `<a href="${img.url}">${img.favecount}<img src="${img.imgUrl}"></a>`
+        total++
+      }
+      if (total >= max_count) break;
+    }
+  }
 }
 
 // eslint-disable-next-line no-unused-vars
-function downloadObjectAsJson(exportObj, exportName){
+const r = new Renderer();
+
+// eslint-disable-next-line no-unused-vars
+function downloadObjectAsJson(exportObj, exportName) {
   var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
   var downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.setAttribute("href",     dataStr);
+  downloadAnchorNode.setAttribute("href", dataStr);
   downloadAnchorNode.setAttribute("download", exportName + ".json");
   document.body.appendChild(downloadAnchorNode); // required for firefox
   downloadAnchorNode.click();
