@@ -12,6 +12,11 @@ class FlickrAPI {
     } else if (window.localStorage["api_key"]) {
       this.api_key = window.localStorage["api_key"];
     }
+    if (window.localStorage["call_history"]) {
+      this.call_history = JSON.parse(window.localStorage["call_history"]);
+    } else {
+      this.call_history = []
+    }
   }
 
   setAPIKey(api_key) {
@@ -19,14 +24,23 @@ class FlickrAPI {
     window.localStorage["api_key"] = api_key;
   }
 
-  checkAPIKey() {
+  checkAPI() {
     if (!(this.api_key && this.api_key.length > 5)) {
       throw new Error("No API key set")
     }
+    const one_hour_ago = Date.now() - 60 * 60 * 1000;
+    while (this.call_history[0] > one_hour_ago) {
+      this.call_history.shift()
+    }
+    if (this.call_history.length > 3500) {
+      throw new Error("Exceeded API limit for this key")
+    }
+    this.call_history.push(Date.now())
+    window.localStorage["call_history"] = JSON.stringify(this.call_history)
   }
 
   async getImageFavorites(photo_id, page = 1) {
-    this.checkAPIKey();
+    this.checkAPI();
     const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
     const method = "&method=flickr.photos.getFavorites&per_page=50";
     const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${this.api_key}`;
@@ -36,7 +50,7 @@ class FlickrAPI {
   }
 
   async getUserFavorites(user_id, page = 1) {
-    this.checkAPIKey();
+    this.checkAPI();
     const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
     const method = "&method=flickr.favorites.getPublicList&per_page=500";
     const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${this.api_key}`;
@@ -80,7 +94,7 @@ class UserDatabase extends FavesDatabase {
   constructor() {
     super()
     this.storageKey = "udb"
-    //get old value from localstorage
+    // TODO get old value from localstorage
   }
 
   addPerson(person) {
@@ -118,6 +132,11 @@ class UserDatabase extends FavesDatabase {
 }
 
 class ImageDatabase extends FavesDatabase {
+  constructor() {
+    super()
+    this.storageKey = "idb"
+    // TODO get old value from localstorage
+  }
 
   addPhoto(photo) {
     this.db[photo.id] = {
@@ -230,6 +249,8 @@ async function processUsersFromDB() {
 }
 
 class Renderer {
+
+
   print_results(max_count = 30) {
     let twins_list = udb.sortedList(max_count);
 
