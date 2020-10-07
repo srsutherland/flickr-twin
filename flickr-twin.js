@@ -26,7 +26,7 @@ class FlickrAPI {
 
   getNumberOfAPICalls() {
     const one_hour_ago = Date.now() - 60 * 60 * 1000;
-    while (this.call_history[0] > one_hour_ago) {
+    while (this.call_history[0] < one_hour_ago) {
       this.call_history.shift()
     }
     return this.call_history.length
@@ -173,74 +173,123 @@ class ImageDatabase extends FavesDatabase {
 const udb = new UserDatabase();
 const idb = new ImageDatabase();
 
-const update = (inputs_processed, total_inputs, pages_processed, total_pages) => {
-  console.log(`${inputs_processed}/${total_inputs} : ${pages_processed}/${total_pages}`);
+class Progress {
+  constructor(total_inputs) {
+    this.number_of_inputs = total_inputs;
+    this.total_inputs = total_inputs;
+    this.inputs_processed = 0;
+    this.total_pages = total_inputs;
+    this.pages_processed = 0;
+    this.duplicates = 0;
+    this.errors = 0;
+  }
+
+  toString() {
+    return `${this.inputs_processed}/${this.total_inputs} : ${this.pages_processed}/${this.total_pages}`
+  }
+
+  log(msg) {
+    if (msg) {
+      console.log("%s (%s)", this.toString(), msg);
+    } else {
+      console.log(this.toString());
+    }
+  }
+
+  updatePages(pages) {
+    // in some cases, there can be zero pages of results
+    if (pages) {
+      // 1 page is already accounted for 
+      this.total_pages += pages - 1;
+    }
+  }
+
+  update(msg) {
+    this.inputs_processed += 1;
+    this.pages_processed += 1;
+    this.log(msg)
+  }
+
+  subUpdate(msg) {
+    this.pages_processed += 1;
+    this.log(msg)
+  }
+
+  duplicate(input_id) {
+    this.duplicates += 1;
+    this.total_inputs -= 1;
+    this.total_pages -= 1;
+    if (input_id) {
+      console.warn(`${input_id} already processed`);
+    }
+  }
+
+  done() {
+    let msg = `Done. Processed ${this.number_of_inputs} users`
+    if (this.duplicates) {
+      msg += ` with ${this.duplicates} duplicates`
+    }
+    console.log(msg + ".");
+  }
 }
 
 // eslint-disable-next-line no-unused-vars
 const processPhotos = async (photo_ids) => {
-  const total_photos = photo_ids.length;
-  let photos_processed = 0;
-  let total_pages = total_photos;
-  let pages_processed = 0;
-  const first_page_promises = []
-  const remaining_promises = []
+  const progress = new Progress(photo_ids.length);
+  const api_promises = [[], []];
   for (const photo_id of photo_ids) {
     if (processed_images[photo_id] === true) {
-      console.warn(`${photo_id} already processed`);
+      progress.duplicate(photo_id);
       continue;
     }
     processed_images[photo_id] = true;
-    first_page_promises.push(api.getImageFavorites(photo_id).then((response) => {
+    api_promises[0].push(api.getImageFavorites(photo_id).then((response) => {
       const pages = response.photo.pages;
-      total_pages += pages - 1 // 1 page is already accounted for 
-      for (let i = 2; i <= pages; i++) {
-        remaining_promises.push(api.getImageFavorites(photo_id, i).then((response) => {
+      console.log("%s: %s pages", photo_id, pages) //TODO remove debugging info
+      progress.updatePages(pages)
+      for (let p = 2; p <= pages; p++) {
+        api_promises[1].push(api.getImageFavorites(photo_id, p).then((response) => {
           udb.add(response);
-          pages_processed += 1;
-          update(photos_processed, total_photos, pages_processed, total_pages);
+          progress.subUpdate(`${photo_id} ${p}`); //TODO remove debugging info
         }));
       }
       udb.add(response);
-      photos_processed += 1;
-      pages_processed += 1;
-      update(photos_processed, total_photos, pages_processed, total_pages);
+      progress.update(`${photo_id} ${1}`); //TODO remove debugging info
     }));
   }
-  await Promise.allSettled(first_page_promises);
-  await Promise.allSettled(remaining_promises);
+  // Wait for all the page 1's...
+  await Promise.allSettled(api_promises[0]);
+  // ...and then for all the other pages
+  await Promise.allSettled(api_promises[1]);
+  progress.done();
 }
 
 // eslint-disable-next-line no-unused-vars
 const processUsers = async (user_ids) => {
-  const total_users = user_ids.length;
-  let users_processed = 0;
-  let total_pages = total_users;
-  let pages_processed = 0;
-  const first_page_promises = []
-  const remaining_promises = []
+  const progress = new Progress(user_ids.length);
+  const api_promises = [[], []];
   for (const user_id of user_ids) {
-    first_page_promises.push(api.getUserFavorites(user_id).then((response) => {
+    api_promises[0].push(api.getUserFavorites(user_id).then((response) => {
       const pages = response.photos.pages > 50 ? 50 : response.photos.pages;
       if (response.photos.pages > 50) {
-        console.warn(`user ${user_id} `)
+        console.warn(`user ${user_id} has more than 50 pages of favorites`)
       }
-      total_pages += pages - 1 // 1 page is already accounted for 
+      progress.updatePages(pages);
       for (let i = 2; i <= pages; i++) {
-        remaining_promises.push(api.getUserFavorites(user_id, i).then((response) => {
+        api_promises[1].push(api.getUserFavorites(user_id, i).then((response) => {
           idb.add(response);
-          pages_processed += 1;
-          update(users_processed, total_users, pages_processed, total_pages)
+          progress.subUpdate()
         }))
       }
       idb.add(response);
-      users_processed += 1;
-      pages_processed += 1;
-      update(users_processed, total_users, pages_processed, total_pages);
+      progress.update();
     }))
   }
-  await Promise.allSettled(first_page_promises);
-  await Promise.allSettled(remaining_promises);
+  // Wait for all the page 1's...
+  await Promise.allSettled(api_promises[0]);
+  // ...and then for all the other pages
+  await Promise.allSettled(api_promises[1]);
+  progress.done();
 }
 
 // eslint-disable-next-line no-unused-vars
