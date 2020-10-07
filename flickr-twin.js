@@ -24,15 +24,19 @@ class FlickrAPI {
     window.localStorage["api_key"] = api_key;
   }
 
-  checkAPI() {
-    if (!(this.api_key && this.api_key.length > 5)) {
-      throw new Error("No API key set")
-    }
+  getNumberOfAPICalls() {
     const one_hour_ago = Date.now() - 60 * 60 * 1000;
     while (this.call_history[0] > one_hour_ago) {
       this.call_history.shift()
     }
-    if (this.call_history.length > 3500) {
+    return this.call_history.length
+  }
+
+  useAPI() {
+    if (!(this.api_key && this.api_key.length > 5)) {
+      throw new Error("No API key set")
+    }
+    if (this.getNumberOfAPICalls() > 3500) {
       throw new Error("Exceeded API limit for this key")
     }
     this.call_history.push(Date.now())
@@ -40,7 +44,7 @@ class FlickrAPI {
   }
 
   async getImageFavorites(photo_id, page = 1) {
-    this.checkAPI();
+    this.useAPI();
     const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
     const method = "&method=flickr.photos.getFavorites&per_page=50";
     const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${this.api_key}`;
@@ -50,7 +54,7 @@ class FlickrAPI {
   }
 
   async getUserFavorites(user_id, page = 1) {
-    this.checkAPI();
+    this.useAPI();
     const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
     const method = "&method=flickr.favorites.getPublicList&per_page=500";
     const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${this.api_key}`;
