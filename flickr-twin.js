@@ -62,6 +62,16 @@ class FlickrAPI {
     const response_json = await rest_response.json(); //extract JSON from the http response
     return response_json;
   }
+
+  async getPhotoInfo(photo_id) {
+    this.useAPI();
+    const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
+    const method = "&method=flickr.photos.getInfo";
+    const rest_url = `${baseurl}${method}&photo_id=${photo_id}&api_key=${this.api_key}`;
+    const rest_response = await fetch(rest_url);
+    const response_json = await rest_response.json(); //extract JSON from the http response
+    return response_json;
+  }
 }
 
 const api = new FlickrAPI(); // KEY REDACTED
@@ -143,12 +153,13 @@ class ImageDatabase extends FavesDatabase {
   }
 
   addPhoto(photo) {
+    const owner = photo.owner instanceof String ? photo.owner : photo.owner.nsid
     this.db[photo.id] = {
       id: photo.id,
-      owner: photo.owner,
+      owner: owner,
       secret: photo.secret,
       server: photo.server,
-      url: `https://www.flickr.com/photos/${photo.owner}/${photo.id}/`,
+      url: `https://www.flickr.com/photos/${owner}/${photo.id}/`,
       imgUrl: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`,
       favecount: 0,
     }
@@ -159,13 +170,18 @@ class ImageDatabase extends FavesDatabase {
       console.log(json_response.stat)
       return;
     }
-    const photos = json_response.photos.photo
-    for (const photo of photos) {
-      const id = photo.id;
-      if (this.db[id] === undefined) {
-        this.addPhoto(photo)
+    //flickr.photos.getInfo
+    if (json_response.photo && !this.db[json_response.photo.id]) {
+      this.addPhoto(json_response.photo)
+    } else { //flickr.favorites.getPublicList
+      const photos = json_response.photos.photo
+      for (const photo of photos) {
+        const id = photo.id;
+        if (this.db[id] === undefined) {
+          this.addPhoto(photo)
+        }
+        this.db[id].favecount += 1;
       }
-      this.db[id].favecount += 1;
     }
   }
 }
