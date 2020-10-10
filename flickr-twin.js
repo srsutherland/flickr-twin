@@ -153,7 +153,7 @@ class ImageDatabase extends FavesDatabase {
   }
 
   addPhoto(photo) {
-    const owner = photo.owner instanceof String ? photo.owner : photo.owner.nsid
+    const owner = typeof photo.owner == "string" ? photo.owner : photo.owner.nsid
     this.db[photo.id] = {
       id: photo.id,
       owner: owner,
