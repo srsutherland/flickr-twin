@@ -286,7 +286,7 @@ const processUsers = async (user_ids) => {
   const api_promises = [[], []];
   for (const user_id of user_ids) {
     api_promises[0].push(api.getUserFavorites(user_id).then((response) => {
-      const pages = response.photos.pages > 50 ? 50 : response.photos.pages;
+      const pages = Math.min(response.photos.pages, 50);
       if (response.photos.pages > 50) {
         console.warn(`user ${user_id} has more than 50 pages of favorites`)
       }
