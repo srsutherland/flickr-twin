@@ -19,6 +19,25 @@ class FlickrAPI {
     }
   }
 
+  toString() {
+    if (this.api_key) {
+      const calls = this.getNumberOfAPICalls()
+      let returnValue = `"${this.api_key}": Used ${calls}/3500 calls this hour.`
+      if (calls > 0) {
+        const ms_until_call_expires = this.call_history[0] + 60 * 60 * 1000 - Date.now()
+        const time_formatted = new Date(ms_until_call_expires).toISOString().substr(11, 8)
+        returnValue += ` Oldest call expires in ${time_formatted}`
+      }
+      return returnValue;
+    } else {
+      return "No API key set"
+    }
+  }
+
+  log() {
+    console.log(this.toString())
+  }
+
   setAPIKey(api_key) {
     this.api_key = api_key;
     window.localStorage["api_key"] = api_key;
@@ -309,9 +328,9 @@ const processUsers = async (user_ids) => {
 }
 
 // eslint-disable-next-line no-unused-vars
-async function processUsersFromDB() {
+async function processUsersFromDB(num = 10) {
   let u = [];
-  for (const i of udb.sortedList(50)) {
+  for (const i of udb.sortedList(num)) {
     u.push(i.nsid)
   }
   await processUsers(u);
@@ -331,19 +350,48 @@ class Renderer {
     }
   }
 
+  addImageCSS() {
+    if (document.getElementById("flickr-twin-img-css") == undefined) {
+      document.head.innerHTML +=
+        `<style id="flickr-twin-img-css">
+          .img-container {
+            margin: 5px;
+            background: rgba(84,91,94,.5);
+          }
+          .flex {
+            display: flex;
+            flex-wrap: wrap;
+          }
+        </style>`
+    }
+  }
+
+  imageHTML(img) {
+    return `<a href="${img.url}">
+      <div class="img-container">
+        <div><img src="${img.imgUrl}"></div>
+        <div>${img.favecount}</div>
+      </div>
+    </a>`
+  }
+
   displayImages(max_count = 100) {
+    this.addImageCSS();
+    document.body.classList.add("flex")
     document.body.innerHTML = "";
     for (const img of idb.sortedList(max_count)) {
-      document.body.innerHTML += `<a href="${img.url}">${img.favecount}<img src="${img.imgUrl}"></a>`
+      document.body.innerHTML += this.imageHTML(img);
     }
   }
 
   displayUnseenImages(max_count = 100) {
+    this.addImageCSS();
+    document.body.classList.add("flex")
     document.body.innerHTML = "";
     let total = 0;
     for (const img of idb.sortedList(10000)) {
       if (!processed_images[img.id]) {
-        document.body.innerHTML += `<a href="${img.url}">${img.favecount}<img src="${img.imgUrl}"></a>`
+        document.body.innerHTML += this.imageHTML(img);
         total++
       }
       if (total >= max_count) break;
