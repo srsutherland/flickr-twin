@@ -94,6 +94,7 @@ class FlickrAPI {
 }
 
 const api = new FlickrAPI(); // KEY REDACTED
+api.log()
 
 class FavesDatabase {
   constructor() {
