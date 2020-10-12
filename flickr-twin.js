@@ -104,7 +104,7 @@ class FavesDatabase {
   sortedList(max_count, starting_from = 0) {
     return Object.values(this.db)
       .sort((a, b) => { return b.favecount - a.favecount; })
-      .slice(starting_from, max_count)
+      .slice(starting_from, starting_from + max_count)
   }
 
   sortedListExcluding(exclude_list, max_count, starting_from = 0) {
@@ -129,7 +129,7 @@ class FavesDatabase {
           return -1 //move b towards end
         }
       })
-      .slice(starting_from, max_count)
+      .slice(starting_from, starting_from + max_count)
   }
 
   trimmedDB(min_faves = 2) {
