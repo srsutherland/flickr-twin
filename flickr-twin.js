@@ -101,8 +101,35 @@ class FavesDatabase {
     this.db = {}
   }
 
-  sortedList(max_count) {
-    return Object.values(this.db).sort((a, b) => { return b.favecount - a.favecount; }).slice(0, max_count)
+  sortedList(max_count, starting_from = 0) {
+    return Object.values(this.db)
+      .sort((a, b) => { return b.favecount - a.favecount; })
+      .slice(starting_from, max_count)
+  }
+
+  sortedListExcluding(exclude_list, max_count, starting_from = 0) {
+    let exclude_dict = {}
+    if (exclude_list instanceof Array) {
+      for (const i of exclude_list) {
+        exclude_dict[i] = true;
+      }
+    } else {
+      exclude_dict = exclude_list;
+    }
+    return Object.values(this.db)
+      .sort((a, b) => {
+        const a_excluded = !!exclude_dict[a.id || a.nsid];
+        const b_excluded = !!exclude_dict[b.id || b.nsid];
+        //if both or neither are excluded
+        if (a_excluded == b_excluded) {
+          return b.favecount - a.favecount;
+        } else if (a_excluded) {
+          return 1 //move a towards end
+        } else if (b_excluded) {
+          return -1 //move b towards end
+        }
+      })
+      .slice(starting_from, max_count)
   }
 
   trimmedDB(min_faves = 2) {
@@ -371,31 +398,30 @@ class Renderer {
     return `<a href="${img.url}">
       <div class="img-container">
         <div><img src="${img.imgUrl}"></div>
-        <div>${img.favecount}</div>
+        <div>${img.favecount} faves</div>
       </div>
     </a>`
   }
 
-  displayImages(max_count = 100) {
+  displayImages(max_count = 100, page = 1) {
     this.addImageCSS();
     document.body.classList.add("flex")
     document.body.innerHTML = "";
-    for (const img of idb.sortedList(max_count)) {
+    const starting_from = (page - 1) * max_count;
+    for (const img of idb.sortedList(max_count, starting_from)) {
       document.body.innerHTML += this.imageHTML(img);
     }
   }
 
-  displayUnseenImages(max_count = 100) {
+  displayUnseenImages(max_count = 100, page = 1) {
     this.addImageCSS();
     document.body.classList.add("flex")
     document.body.innerHTML = "";
-    let total = 0;
-    for (const img of idb.sortedList(10000)) {
+    const starting_from = (page - 1) * max_count;
+    for (const img of idb.sortedListExcluding(processed_images, max_count, starting_from)) {
       if (!processed_images[img.id]) {
         document.body.innerHTML += this.imageHTML(img);
-        total++
       }
-      if (total >= max_count) break;
     }
   }
 }
