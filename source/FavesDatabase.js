@@ -54,6 +54,8 @@ class FavesDatabase {
         this.db = JSON.parse(window.localStorage[this.storageKey]);
     }
 }
+
+// eslint-disable-next-line no-unused-vars
 class UserDatabase extends FavesDatabase {
     constructor() {
         super();
@@ -94,6 +96,8 @@ class UserDatabase extends FavesDatabase {
         }
     }
 }
+
+// eslint-disable-next-line no-unused-vars
 class ImageDatabase extends FavesDatabase {
     constructor() {
         super();
@@ -134,7 +138,3 @@ class ImageDatabase extends FavesDatabase {
         }
     }
 }
-
-/* eslint-disable no-unused-vars */
-const udb = new UserDatabase();
-const idb = new ImageDatabase();

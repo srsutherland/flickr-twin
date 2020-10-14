@@ -1,7 +1,5 @@
 'use strict';
 
-var processed_images = {};
-
 /* file source/FlickrAPI.js */
 
 /* file source/FavesDatabase.js */

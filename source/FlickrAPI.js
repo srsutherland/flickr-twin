@@ -1,5 +1,6 @@
 'use strict';
 
+// eslint-disable-next-line no-unused-vars
 class FlickrAPI {
     constructor(api_key) {
         if (api_key) {
@@ -87,6 +88,3 @@ class FlickrAPI {
         return response_json;
     }
 }
-
-const api = new FlickrAPI(); // KEY REDACTED
-api.log()
