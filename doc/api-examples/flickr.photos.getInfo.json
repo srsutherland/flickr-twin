@@ -1,0 +1,104 @@
+{
+    "photo": {
+        "id": "5479963537",
+        "secret": "c1f5ae6e18",
+        "server": "5136",
+        "farm": 6,
+        "dateuploaded": "1298767580",
+        "isfavorite": 0,
+        "license": "0",
+        "safety_level": "0",
+        "rotation": 0,
+        "originalsecret": "b85e96d570",
+        "originalformat": "jpg",
+        "owner": {
+            "nsid": "59431731@N05",
+            "username": "Jurgen Otto",
+            "realname": "Jurgen Otto",
+            "location": "Sydney, Australia",
+            "iconserver": "2879",
+            "iconfarm": 3,
+            "path_alias": null
+        },
+        "title": {
+            "_content": "_MG_6971"
+        },
+        "description": {
+            "_content": "salticid from Sydney. This species can be found on sandstone boulders"
+        },
+        "visibility": {
+            "ispublic": 1,
+            "isfriend": 0,
+            "isfamily": 0
+        },
+        "dates": {
+            "posted": "1298767580",
+            "taken": "2010-09-29 13:50:37",
+            "takengranularity": "0",
+            "takenunknown": 0,
+            "lastupdate": "1557522986"
+        },
+        "views": "442",
+        "editability": {
+            "cancomment": 0,
+            "canaddmeta": 0
+        },
+        "publiceditability": {
+            "cancomment": 1,
+            "canaddmeta": 0
+        },
+        "usage": {
+            "candownload": 1,
+            "canblog": 0,
+            "canprint": 0,
+            "canshare": 1
+        },
+        "comments": {
+            "_content": "0"
+        },
+        "notes": {
+            "note": []
+        },
+        "people": {
+            "haspeople": 0
+        },
+        "tags": {
+            "tag": [
+                {
+                    "id": "59426391-5479963537-727998",
+                    "author": "59431731@N05",
+                    "authorname": "Jurgen Otto",
+                    "raw": "salticidae",
+                    "_content": "salticidae",
+                    "machine_tag": 0
+                },
+                {
+                    "id": "59426391-5479963537-67280",
+                    "author": "59431731@N05",
+                    "authorname": "Jurgen Otto",
+                    "raw": "jumping spider",
+                    "_content": "jumpingspider",
+                    "machine_tag": 0
+                },
+                {
+                    "id": "59426391-5479963537-8512",
+                    "author": "59431731@N05",
+                    "authorname": "Jurgen Otto",
+                    "raw": "australia",
+                    "_content": "australia",
+                    "machine_tag": 0
+                }
+            ]
+        },
+        "urls": {
+            "url": [
+                {
+                    "type": "photopage",
+                    "_content": "https:\/\/www.flickr.com\/photos\/59431731@N05\/5479963537\/"
+                }
+            ]
+        },
+        "media": "photo"
+    },
+    "stat": "ok"
+}

@@ -2,6 +2,9 @@
 
 // eslint-disable-next-line no-unused-vars
 class FlickrAPI {
+    /**
+     * @param {string} api_key 
+     */
     constructor(api_key) {
         if (api_key) {
             this.setAPIKey(api_key);
@@ -39,6 +42,9 @@ class FlickrAPI {
         window.localStorage["api_key"] = api_key;
     }
 
+    /**
+     * Returns the number of (recorded) times the api key has been used this hour
+     */
     getNumberOfAPICalls() {
         const one_hour_ago = Date.now() - 60 * 60 * 1000;
         while (this.call_history[0] < one_hour_ago) {
@@ -47,6 +53,10 @@ class FlickrAPI {
         return this.call_history.length;
     }
 
+    /**
+     * Called before an api call to check that the key is valid and under limit, 
+     * and then increment the hourly count
+     */
     useAPI() {
         if (!(this.api_key && this.api_key.length > 5)) {
             throw new Error("No API key set");
@@ -58,6 +68,13 @@ class FlickrAPI {
         window.localStorage["call_history"] = JSON.stringify(this.call_history);
     }
 
+    /**
+     * https://www.flickr.com/services/api/flickr.photos.getFavorites.html
+     * Returns a json object with a list of people who have favorited a given photo.
+     * See doc/api-examples/flickr.photos.getFavorites.json for an example.
+     * @param {string} photo_id - The ID of the photo to fetch the favoriters list for.
+     * @param {number} page - The page of results to return. If this argument is omitted, it defaults to 1.
+     */
     async getImageFavorites(photo_id, page = 1) {
         this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
@@ -68,6 +85,13 @@ class FlickrAPI {
         return response_json;
     }
 
+    /**
+     * https://www.flickr.com/services/api/flickr.favorites.getPublicList.html
+     * Returns a json object with a list of favorite public photos for the given user.
+     * See doc/api-examples/flickr.favorites.getPublicList.json for an example.
+     * @param {string} user_id - The user to fetch the favorites list for.
+     * @param {number} page - The page of results to return. If this argument is omitted, it defaults to 1.
+     */
     async getUserFavorites(user_id, page = 1) {
         this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
@@ -78,6 +102,12 @@ class FlickrAPI {
         return response_json;
     }
 
+    /**
+     * https://www.flickr.com/services/api/flickr.photos.getInfo.html
+     * Returns a json object with information about a photo.
+     * See doc/api-examples/flickr.photos.getInfo.json for an example.
+     * @param {string} photo_id - The id of the photo to get information for.
+     */
     async getPhotoInfo(photo_id) {
         this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
