@@ -8,3 +8,13 @@ function downloadObjectAsJson(exportObj, exportName) {
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
 }
+
+/**
+ * Returns an Array containing the members of A which are not in B
+ * @param {Array} inputA 
+ * @param {Array} inputB 
+ */
+// eslint-disable-next-line no-unused-vars
+function aNotInB(inputA, inputB) {
+    return inputA.filter(a => !inputB.includes(a))
+}
