@@ -75,6 +75,16 @@ class Controller {
         await this.processUsers(u);
     }
 
+    async loadPhotos(photo_ids) {
+        const ls = []
+        for (const photo_id of photo_ids) {
+            ls.push(
+                this.api.getPhotoInfo(photo_id).then(response => this.idb.add(response))
+            )
+        }
+        await Promise.allSettled(ls)
+    }
+
 }
 
 class Progress {
