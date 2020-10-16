@@ -1,4 +1,5 @@
 'use strict';
+//disclaimer
 
 //@include source/FlickrAPI.js
 
