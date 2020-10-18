@@ -10,11 +10,32 @@ function downloadObjectAsJson(exportObj, exportName) {
 }
 
 /**
- * Returns an Array containing the members of A which are not in B
- * @param {Array} inputA 
- * @param {Array} inputB 
+ * Returns a new Array containing the members of the calling array which are not in B
+ * @param {Array} B
+ * @returns {Array}
  */
-// eslint-disable-next-line no-unused-vars
-function aNotInB(inputA, inputB) {
-    return inputA.filter(a => !inputB.includes(a))
+Array.prototype.notIn = function (B) {
+    return this.filter(a => !B.includes(a))
 }
+
+/**
+ * Returns a new Array containing the members of the calling array which are also in B
+ * @param {Array} B
+ * @returns {Array}
+ */
+Array.prototype.in = function (B) {
+    return this.filter(a => B.includes(a))
+}
+
+/**
+ * Copy Object.keys() and Object.values() to prototype for convenience when playing with data
+ */
+Object.prototype.keys = function () {
+    console.warn("Use Object.keys(*) instead")
+    return Object.keys(this);
+};
+
+Object.prototype.values = function () {
+    console.warn("Use Object.values(*) instead")
+    return Object.values(this);
+};
