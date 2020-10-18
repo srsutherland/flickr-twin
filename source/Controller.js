@@ -14,19 +14,18 @@ class Controller {
 
     async processPhotos(photo_ids) {
         const progress = new Progress(photo_ids.length);
-        const api_promises = [[], []];
         for (const photo_id of photo_ids) {
             if (this.processed_images[photo_id] === true) {
                 progress.duplicate(photo_id);
                 continue;
             }
             this.processed_images[photo_id] = true;
-            api_promises[0].push(this.api.getImageFavorites(photo_id).then((response) => {
+            progress.await(this.api.getImageFavorites(photo_id).then((response) => {
                 const pages = response.photo.pages;
                 console.log("%s: %s pages", photo_id, pages) //TODO remove debugging info
                 progress.updatePages(pages)
                 for (let p = 2; p <= pages; p++) {
-                    api_promises[1].push(this.api.getImageFavorites(photo_id, p).then((response) => {
+                    progress.awaitSub(this.api.getImageFavorites(photo_id, p).then((response) => {
                         this.udb.add(response);
                         progress.subUpdate(`${photo_id} ${p}`); //TODO remove debugging info
                     }));
@@ -35,25 +34,22 @@ class Controller {
                 progress.update(`${photo_id} ${1}`); //TODO remove debugging info
             }));
         }
-        // Wait for all the page 1's...
-        await Promise.allSettled(api_promises[0]);
-        // ...and then for all the other pages
-        await Promise.allSettled(api_promises[1]);
+        // Wait for all the api call promises to settle
+        await progress.allSettled()
         progress.done();
     }
 
     async processUsers(user_ids) {
         const progress = new Progress(user_ids.length);
-        const api_promises = [[], []];
         for (const user_id of user_ids) {
-            api_promises[0].push(this.api.getUserFavorites(user_id).then((response) => {
+            progress.await(this.api.getUserFavorites(user_id).then((response) => {
                 const pages = Math.min(response.photos.pages, 50);
                 if (response.photos.pages > 50) {
                     console.warn(`user ${user_id} has more than 50 pages of favorites`)
                 }
                 progress.updatePages(pages);
                 for (let i = 2; i <= pages; i++) {
-                    api_promises[1].push(this.api.getUserFavorites(user_id, i).then((response) => {
+                    progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
                         this.idb.add(response);
                         progress.subUpdate()
                     }))
@@ -62,10 +58,8 @@ class Controller {
                 progress.update();
             }))
         }
-        // Wait for all the page 1's...
-        await Promise.allSettled(api_promises[0]);
-        // ...and then for all the other pages
-        await Promise.allSettled(api_promises[1]);
+        // Wait for all the api call promises to settle
+        await progress.allSettled();
         progress.done();
     }
 
@@ -98,6 +92,8 @@ class Progress {
         this.pages_processed = 0;
         this.duplicates = 0;
         this.errors = 0;
+        this.awaited = [];
+        this.awaitedSub = [];
     }
 
     toString() {
@@ -140,6 +136,35 @@ class Progress {
         }
     }
 
+    /**
+     * Collects promises from primary api calls
+     * @param {Promise} promise 
+     */
+    await(promise) {
+        this.awaited.push(promise)
+    }
+
+    /**
+     * Collects promises from secondary api calls
+     * @param {Promise} promise 
+     */
+    awaitSub(promise) {
+        this.awaitedSub.push(promise)
+    }
+
+    /**
+     * @returns {Promise} - Resolves when all collected api call promises have resolved/failed
+     */
+    async allSettled() {
+        // Wait for all the page 1's...
+        await Promise.allSettled(this.awaited)
+        // ...and then for all the other pages
+        await Promise.allSettled(this.awaitedSub)
+    }
+ 
+    /**
+     * Log that the task has been completed
+     */
     done() {
         let msg = `Done. Processed ${this.inputs_processed}/${this.number_of_inputs} items`
         if (this.duplicates) {
