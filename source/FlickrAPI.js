@@ -3,7 +3,8 @@
 // eslint-disable-next-line no-unused-vars
 class FlickrAPI {
     /**
-     * @param {string} api_key 
+     * Create the api wrapper
+     * @param {string} api_key - (optional) If omitted, attempts to read saved value from localstorage 
      */
     constructor(api_key) {
         if (api_key) {
@@ -18,6 +19,11 @@ class FlickrAPI {
         }
     }
 
+    /**
+     * Return the string representation of the object, e.g.
+     * "83a16800e347e711938a038fd642fc2d": Used 1/3500 calls this hour. Oldest call expires in 00:42:42
+     * @returns {string}
+     */
     toString() {
         if (this.api_key) {
             const calls = this.getNumberOfAPICalls();
@@ -44,6 +50,7 @@ class FlickrAPI {
 
     /**
      * Returns the number of (recorded) times the api key has been used this hour
+     * @returns {number}
      */
     getNumberOfAPICalls() {
         const one_hour_ago = Date.now() - 60 * 60 * 1000;
@@ -74,6 +81,7 @@ class FlickrAPI {
      * See doc/api-examples/flickr.photos.getFavorites.json for an example.
      * @param {string} photo_id - The ID of the photo to fetch the favoriters list for.
      * @param {number} page - The page of results to return. If this argument is omitted, it defaults to 1.
+     * @returns {Object} - Parsed version of the json response
      */
     async getImageFavorites(photo_id, page = 1) {
         this.useAPI();
@@ -91,6 +99,7 @@ class FlickrAPI {
      * See doc/api-examples/flickr.favorites.getPublicList.json for an example.
      * @param {string} user_id - The user to fetch the favorites list for.
      * @param {number} page - The page of results to return. If this argument is omitted, it defaults to 1.
+     * @returns {Object} - Parsed version of the json response
      */
     async getUserFavorites(user_id, page = 1) {
         this.useAPI();
@@ -107,6 +116,7 @@ class FlickrAPI {
      * Returns a json object with information about a photo.
      * See doc/api-examples/flickr.photos.getInfo.json for an example.
      * @param {string} photo_id - The id of the photo to get information for.
+     * @returns {Object} - Parsed version of the json response
      */
     async getPhotoInfo(photo_id) {
         this.useAPI();
