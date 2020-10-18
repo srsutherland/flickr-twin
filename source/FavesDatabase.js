@@ -22,7 +22,7 @@ class FavesDatabase {
 
     /**
      * 
-     * @param {Array, Object} exclude_list - 
+     * @param {Array | Object} exclude_list - List of items to exclude from the list. Sorted to end.
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
      * @returns {Array} - The sorted Array
