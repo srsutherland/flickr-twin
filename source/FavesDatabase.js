@@ -1,16 +1,32 @@
 'use strict';
 
+/**
+ * Base class for UserDatabase and ImageDatabase
+ */
 class FavesDatabase {
     constructor() {
         this.db = {};
     }
 
+    /**
+     * Returns an Array of the contents of the db, sorted by fave count (highest first)
+     * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
+     * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
+     * @returns {Array} - The sorted Array
+     */
     sortedList(max_count, starting_from = 0) {
         return Object.values(this.db)
             .sort((a, b) => { return b.favecount - a.favecount; })
             .slice(starting_from, starting_from + max_count);
     }
 
+    /**
+     * 
+     * @param {Array, Object} exclude_list - 
+     * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
+     * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
+     * @returns {Array} - The sorted Array
+     */
     sortedListExcluding(exclude_list, max_count, starting_from = 0) {
         let exclude_dict = {};
         if (exclude_list instanceof Array) {
@@ -36,6 +52,9 @@ class FavesDatabase {
             .slice(starting_from, starting_from + max_count);
     }
 
+    /**
+     * @returns {Object} - The internal database, with insignificant members trimmed off.
+     */
     trimmedDB(min_faves = 2) {
         let newdb = {};
         for (const key in this.db) {
@@ -46,10 +65,16 @@ class FavesDatabase {
         return newdb;
     }
 
+    /**
+     * Copy db to localstorage (may be too large)
+     */
     store() {
         window.localStorage[this.storageKey] = JSON.stringify(this.db);
     }
 
+    /**
+     * Load db from localstorage
+     */
     load() {
         this.db = JSON.parse(window.localStorage[this.storageKey]);
     }
