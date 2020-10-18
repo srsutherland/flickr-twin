@@ -8,7 +8,7 @@ class Controller {
         this.udb = new UserDatabase();
         this.idb = new ImageDatabase();
         this.processed_images = {};
-        this.r = new Renderer();
+        this.r = new Renderer(this);
         /* eslint-enable no-undef */
     }
 
@@ -141,7 +141,7 @@ class Progress {
     }
 
     done() {
-        let msg = `Done. Processed ${this.number_of_inputs} users`
+        let msg = `Done. Processed ${this.inputs_processed}/${this.number_of_inputs} items`
         if (this.duplicates) {
             msg += ` with ${this.duplicates} duplicates`
         }
