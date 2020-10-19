@@ -44,26 +44,31 @@ class Renderer {
     </a>`;
     }
 
-    displayImages(max_count = 100, page = 1) {
+    displayImages(image_list) {
         this.addImageCSS();
         document.body.classList.add("flex");
-        let newHTML =  "";
-        const starting_from = (page - 1) * max_count;
-        for (const img of this.idb.sortedList(max_count, starting_from)) {
+        let newHTML = "";
+        for (const img of image_list) {
             newHTML += this.imageHTML(img);
         }
         document.body.innerHTML = newHTML;
     }
 
-    displayUnseenImages(max_count = 100, page = 1) {
-        this.addImageCSS();
-        document.body.classList.add("flex");
-        let newHTML =  "";
+    displayImagesByIDs(id_list) {
+        const image_list = id_list.map(id => this.idb.get(id)).filter(Boolean);
+        this.displayImages(image_list);
+    }
+
+    displayAllImages(max_count = 100, page = 1) {
         const starting_from = (page - 1) * max_count;
-        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden]
-        for (const img of this.idb.sortedListExcluding(excluding, max_count, starting_from)) {
-            newHTML += this.imageHTML(img);
-        }
-        document.body.innerHTML = newHTML;
+        const image_list = this.idb.sortedList(max_count, starting_from);
+        this.displayImages(image_list);
+    }
+
+    displayUnseenImages(max_count = 100, page = 1) {
+        const starting_from = (page - 1) * max_count;
+        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
+        const image_list = this.idb.sortedListExcluding(excluding, max_count, starting_from);
+        this.displayImages(image_list);
     }
 }
