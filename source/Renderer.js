@@ -47,22 +47,23 @@ class Renderer {
     displayImages(max_count = 100, page = 1) {
         this.addImageCSS();
         document.body.classList.add("flex");
-        document.body.innerHTML = "";
+        let newHTML =  "";
         const starting_from = (page - 1) * max_count;
         for (const img of this.idb.sortedList(max_count, starting_from)) {
-            document.body.innerHTML += this.imageHTML(img);
+            newHTML += this.imageHTML(img);
         }
+        document.body.innerHTML = newHTML;
     }
 
     displayUnseenImages(max_count = 100, page = 1) {
         this.addImageCSS();
         document.body.classList.add("flex");
-        document.body.innerHTML = "";
+        let newHTML =  "";
         const starting_from = (page - 1) * max_count;
-        for (const img of this.idb.sortedListExcluding(this.c.processed_images, max_count, starting_from)) {
-            if (!this.c.processed_images[img.id]) {
-                document.body.innerHTML += this.imageHTML(img);
-            }
+        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden]
+        for (const img of this.idb.sortedListExcluding(excluding, max_count, starting_from)) {
+            newHTML += this.imageHTML(img);
         }
+        document.body.innerHTML = newHTML;
     }
 }

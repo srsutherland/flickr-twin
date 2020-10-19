@@ -7,7 +7,9 @@ class Controller {
         this.api = new FlickrAPI();
         this.udb = new UserDatabase();
         this.idb = new ImageDatabase();
-        this.processed_images = {};
+        this.processed_images = new Set();
+        this.excluded = new Set();
+        this.hidden = new Set();
         this.r = new Renderer(this);
         /* eslint-enable no-undef */
     }
@@ -15,15 +17,17 @@ class Controller {
     async processPhotos(photo_ids) {
         const progress = new Progress(photo_ids.length);
         for (const photo_id of photo_ids) {
-            if (this.processed_images[photo_id] === true) {
+            if (this.processed_images.has(photo_id)) {
                 progress.duplicate(photo_id);
                 continue;
             }
-            this.processed_images[photo_id] = true;
+            this.processed_images.add(photo_id);
+            //Load the first page of faves for each image, get total number of pages
             progress.await(this.api.getImageFavorites(photo_id).then((response) => {
                 const pages = response.photo.pages;
                 console.log("%s: %s pages", photo_id, pages) //TODO remove debugging info
                 progress.updatePages(pages)
+                // Load each subpage
                 for (let p = 2; p <= pages; p++) {
                     progress.awaitSub(this.api.getImageFavorites(photo_id, p).then((response) => {
                         this.udb.add(response);
@@ -32,6 +36,9 @@ class Controller {
                 }
                 this.udb.add(response);
                 progress.update(`${photo_id} ${1}`); //TODO remove debugging info
+            }).catch(() => {
+                this.processed_images.delete(photo_id)
+                progress.error(photo_id)
             }));
         }
         // Wait for all the api call promises to settle
@@ -81,6 +88,17 @@ class Controller {
         await Promise.allSettled(ls)
     }
 
+    exclude(list) {
+        for (const i of list) {
+            this.excluded.add(i);
+        }
+    }
+
+    hide(list) {
+        for (const i of list) {
+            this.hidden.add(i);
+        }
+    }
 }
 
 class Progress {
@@ -133,6 +151,13 @@ class Progress {
         this.total_pages -= 1;
         if (input_id) {
             console.warn(`${input_id} already processed`);
+        }
+    }
+
+    error(input_id) {
+        this.errors += 1
+        if (input_id) {
+            console.error(`Error processing ${input_id}`);
         }
     }
 

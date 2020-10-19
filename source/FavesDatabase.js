@@ -21,34 +21,16 @@ class FavesDatabase {
     }
 
     /**
-     * 
-     * @param {Array | Object} exclude_list - List of items to exclude from the list. Sorted to end.
+     * Returns an Array of the contents of the db, sorted by fave count (highest first), excluding exclude_list
+     * @param {Array | Set} exclude_list - Set or list of items to exclude from the list. 
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
      * @returns {Array} - The sorted Array
      */
     sortedListExcluding(exclude_list, max_count, starting_from = 0) {
-        let exclude_dict = {};
-        if (exclude_list instanceof Array) {
-            for (const i of exclude_list) {
-                exclude_dict[i] = true;
-            }
-        } else {
-            exclude_dict = exclude_list;
-        }
-        return Object.values(this.db)
-            .sort((a, b) => {
-                const a_excluded = !!exclude_dict[a.id || a.nsid];
-                const b_excluded = !!exclude_dict[b.id || b.nsid];
-                //if both or neither are excluded
-                if (a_excluded == b_excluded) {
-                    return b.favecount - a.favecount;
-                } else if (a_excluded) {
-                    return 1; //move a towards end
-                } else if (b_excluded) {
-                    return -1; //move b towards end
-                }
-            })
+        return this
+            .excluding(exclude_list)
+            .sort((a, b) => { return b.favecount - a.favecount; })
             .slice(starting_from, starting_from + max_count);
     }
 
@@ -63,6 +45,25 @@ class FavesDatabase {
             }
         }
         return newdb;
+    }
+
+    /**
+     * 
+     * @param {Array | Set} exclude_list - Set or list of items to exclude from the list. 
+     * @returns {Array} - A new array containing that members of the db, excluding above
+     */
+    excluding(exclude_list) {
+        let exclude_set
+        if (exclude_list instanceof Array) {
+            exclude_set = new Set(exclude_list)
+        } else if (exclude_list instanceof Set) {
+            exclude_set = exclude_list;
+        } else {
+            throw (new TypeError("exclude_list must be an array or set"))
+        }
+        return Object.values(this.db).filter(
+            (item) => !exclude_set.has(item.id || item.nsid)
+        )
     }
 
     /**

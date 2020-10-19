@@ -134,42 +134,43 @@ class FlickrAPI {
 
 'use strict';
 
+/**
+ * Base class for UserDatabase and ImageDatabase
+ */
 class FavesDatabase {
     constructor() {
         this.db = {};
     }
 
+    /**
+     * Returns an Array of the contents of the db, sorted by fave count (highest first)
+     * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
+     * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
+     * @returns {Array} - The sorted Array
+     */
     sortedList(max_count, starting_from = 0) {
         return Object.values(this.db)
             .sort((a, b) => { return b.favecount - a.favecount; })
             .slice(starting_from, starting_from + max_count);
     }
 
+    /**
+     * Returns an Array of the contents of the db, sorted by fave count (highest first), excluding exclude_list
+     * @param {Array | Set} exclude_list - Set or list of items to exclude from the list. 
+     * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
+     * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
+     * @returns {Array} - The sorted Array
+     */
     sortedListExcluding(exclude_list, max_count, starting_from = 0) {
-        let exclude_dict = {};
-        if (exclude_list instanceof Array) {
-            for (const i of exclude_list) {
-                exclude_dict[i] = true;
-            }
-        } else {
-            exclude_dict = exclude_list;
-        }
-        return Object.values(this.db)
-            .sort((a, b) => {
-                const a_excluded = !!exclude_dict[a.id || a.nsid];
-                const b_excluded = !!exclude_dict[b.id || b.nsid];
-                //if both or neither are excluded
-                if (a_excluded == b_excluded) {
-                    return b.favecount - a.favecount;
-                } else if (a_excluded) {
-                    return 1; //move a towards end
-                } else if (b_excluded) {
-                    return -1; //move b towards end
-                }
-            })
+        return this
+            .excluding(exclude_list)
+            .sort((a, b) => { return b.favecount - a.favecount; })
             .slice(starting_from, starting_from + max_count);
     }
 
+    /**
+     * @returns {Object} - The internal database, with insignificant members trimmed off.
+     */
     trimmedDB(min_faves = 2) {
         let newdb = {};
         for (const key in this.db) {
@@ -180,10 +181,35 @@ class FavesDatabase {
         return newdb;
     }
 
+    /**
+     * 
+     * @param {Array | Set} exclude_list - Set or list of items to exclude from the list. 
+     * @returns {Array} - A new array containing that members of the db, excluding above
+     */
+    excluding(exclude_list) {
+        let exclude_set
+        if (exclude_list instanceof Array) {
+            exclude_set = new Set(exclude_list)
+        } else if (exclude_list instanceof Set) {
+            exclude_set = exclude_list;
+        } else {
+            throw (new TypeError("exclude_list must be an array or set"))
+        }
+        return Object.values(this.db).filter(
+            (item) => !exclude_set.has(item.id || item.nsid)
+        )
+    }
+
+    /**
+     * Copy db to localstorage (may be too large)
+     */
     store() {
         window.localStorage[this.storageKey] = JSON.stringify(this.db);
     }
 
+    /**
+     * Load db from localstorage
+     */
     load() {
         this.db = JSON.parse(window.localStorage[this.storageKey]);
     }
@@ -322,23 +348,24 @@ class Renderer {
     displayImages(max_count = 100, page = 1) {
         this.addImageCSS();
         document.body.classList.add("flex");
-        document.body.innerHTML = "";
+        let newHTML =  "";
         const starting_from = (page - 1) * max_count;
         for (const img of this.idb.sortedList(max_count, starting_from)) {
-            document.body.innerHTML += this.imageHTML(img);
+            newHTML += this.imageHTML(img);
         }
+        document.body.innerHTML = newHTML;
     }
 
     displayUnseenImages(max_count = 100, page = 1) {
         this.addImageCSS();
         document.body.classList.add("flex");
-        document.body.innerHTML = "";
+        let newHTML =  "";
         const starting_from = (page - 1) * max_count;
-        for (const img of this.idb.sortedListExcluding(this.c.processed_images, max_count, starting_from)) {
-            if (!this.c.processed_images[img.id]) {
-                document.body.innerHTML += this.imageHTML(img);
-            }
+        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden]
+        for (const img of this.idb.sortedListExcluding(excluding, max_count, starting_from)) {
+            newHTML += this.imageHTML(img);
         }
+        document.body.innerHTML = newHTML;
     }
 }
 
@@ -351,53 +378,56 @@ class Controller {
         this.api = new FlickrAPI();
         this.udb = new UserDatabase();
         this.idb = new ImageDatabase();
-        this.processed_images = {};
+        this.processed_images = new Set();
+        this.excluded = new Set();
+        this.hidden = new Set();
         this.r = new Renderer(this);
         /* eslint-enable no-undef */
     }
 
     async processPhotos(photo_ids) {
         const progress = new Progress(photo_ids.length);
-        const api_promises = [[], []];
         for (const photo_id of photo_ids) {
-            if (this.processed_images[photo_id] === true) {
+            if (this.processed_images.has(photo_id)) {
                 progress.duplicate(photo_id);
                 continue;
             }
-            this.processed_images[photo_id] = true;
-            api_promises[0].push(this.api.getImageFavorites(photo_id).then((response) => {
+            this.processed_images.add(photo_id);
+            //Load the first page of faves for each image, get total number of pages
+            progress.await(this.api.getImageFavorites(photo_id).then((response) => {
                 const pages = response.photo.pages;
                 console.log("%s: %s pages", photo_id, pages) //TODO remove debugging info
                 progress.updatePages(pages)
+                // Load each subpage
                 for (let p = 2; p <= pages; p++) {
-                    api_promises[1].push(this.api.getImageFavorites(photo_id, p).then((response) => {
+                    progress.awaitSub(this.api.getImageFavorites(photo_id, p).then((response) => {
                         this.udb.add(response);
                         progress.subUpdate(`${photo_id} ${p}`); //TODO remove debugging info
                     }));
                 }
                 this.udb.add(response);
                 progress.update(`${photo_id} ${1}`); //TODO remove debugging info
+            }).catch(() => {
+                this.processed_images.delete(photo_id)
+                progress.error(photo_id)
             }));
         }
-        // Wait for all the page 1's...
-        await Promise.allSettled(api_promises[0]);
-        // ...and then for all the other pages
-        await Promise.allSettled(api_promises[1]);
+        // Wait for all the api call promises to settle
+        await progress.allSettled()
         progress.done();
     }
 
     async processUsers(user_ids) {
         const progress = new Progress(user_ids.length);
-        const api_promises = [[], []];
         for (const user_id of user_ids) {
-            api_promises[0].push(this.api.getUserFavorites(user_id).then((response) => {
+            progress.await(this.api.getUserFavorites(user_id).then((response) => {
                 const pages = Math.min(response.photos.pages, 50);
                 if (response.photos.pages > 50) {
                     console.warn(`user ${user_id} has more than 50 pages of favorites`)
                 }
                 progress.updatePages(pages);
                 for (let i = 2; i <= pages; i++) {
-                    api_promises[1].push(this.api.getUserFavorites(user_id, i).then((response) => {
+                    progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
                         this.idb.add(response);
                         progress.subUpdate()
                     }))
@@ -406,10 +436,8 @@ class Controller {
                 progress.update();
             }))
         }
-        // Wait for all the page 1's...
-        await Promise.allSettled(api_promises[0]);
-        // ...and then for all the other pages
-        await Promise.allSettled(api_promises[1]);
+        // Wait for all the api call promises to settle
+        await progress.allSettled();
         progress.done();
     }
 
@@ -431,6 +459,17 @@ class Controller {
         await Promise.allSettled(ls)
     }
 
+    exclude(list) {
+        for (const i of list) {
+            this.excluded.add(i);
+        }
+    }
+
+    hide(list) {
+        for (const i of list) {
+            this.hidden.add(i);
+        }
+    }
 }
 
 class Progress {
@@ -442,6 +481,8 @@ class Progress {
         this.pages_processed = 0;
         this.duplicates = 0;
         this.errors = 0;
+        this.awaited = [];
+        this.awaitedSub = [];
     }
 
     toString() {
@@ -484,6 +525,42 @@ class Progress {
         }
     }
 
+    error(input_id) {
+        this.errors += 1
+        if (input_id) {
+            console.error(`Error processing ${input_id}`);
+        }
+    }
+
+    /**
+     * Collects promises from primary api calls
+     * @param {Promise} promise 
+     */
+    await(promise) {
+        this.awaited.push(promise)
+    }
+
+    /**
+     * Collects promises from secondary api calls
+     * @param {Promise} promise 
+     */
+    awaitSub(promise) {
+        this.awaitedSub.push(promise)
+    }
+
+    /**
+     * @returns {Promise} - Resolves when all collected api call promises have resolved/failed
+     */
+    async allSettled() {
+        // Wait for all the page 1's...
+        await Promise.allSettled(this.awaited)
+        // ...and then for all the other pages
+        await Promise.allSettled(this.awaitedSub)
+    }
+ 
+    /**
+     * Log that the task has been completed
+     */
     done() {
         let msg = `Done. Processed ${this.inputs_processed}/${this.number_of_inputs} items`
         if (this.duplicates) {
