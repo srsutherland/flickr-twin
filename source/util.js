@@ -27,6 +27,14 @@ Array.prototype.in = function (B) {
     return this.filter(a => B.includes(a))
 }
 
+const SetAddSingle = Set.prototype.add
+Set.prototype.add = function () {
+    for (const item of arguments) {
+        SetAddSingle.call(this, item);
+    }
+    return this;
+}
+
 /**
  * Copy Object.keys() and Object.values() to prototype for convenience when playing with data
  */
