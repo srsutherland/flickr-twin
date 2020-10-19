@@ -73,11 +73,8 @@ class Controller {
     }
 
     async processUsersFromDB(num = 20) {
-        let u = [];
-        for (const i of this.udb.sortedList(num)) {
-            u.push(i.nsid)
-        }
-        await this.processUsers(u);
+        const users = this.udb.sortedList(num).map(user => user.nsid)
+        await this.processUsers(users);
     }
 
     /**
