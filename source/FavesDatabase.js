@@ -183,7 +183,7 @@ class ImageDatabase extends FavesDatabase {
             const photos = json_response.photos.photo;
             for (const photo of photos) {
                 const id = photo.id;
-                if (this.has(id)) {
+                if (!this.has(id)) {
                     this.addPhoto(photo);
                 }
                 this.get(id).favecount += 1;
