@@ -78,14 +78,25 @@ class Controller {
         await this.processUsers(u);
     }
 
+    /**
+     * Make sure the specified photos are loaded into idb so you can display them
+     * Uses api.getPhotoInfo() (flickr.photos.getInfo)
+     * @param {Array} photo_ids - List of photo ids to load
+     */
     async loadPhotos(photo_ids) {
-        const ls = []
+        const progress = new Progress(photo_ids.length)
         for (const photo_id of photo_ids) {
-            ls.push(
-                this.api.getPhotoInfo(photo_id).then(response => this.idb.add(response))
-            )
+            if (!this.idb.has(photo_id)) {
+                progress.await(this.api.getPhotoInfo(photo_id).then(response => {
+                    this.idb.add(response)
+                    progress.update()
+                }))
+            } else {
+                progress.duplicate()
+            }
         }
-        await Promise.allSettled(ls)
+        await progress.allSettled()
+        progress.done()
     }
 
     exclude(list) {
@@ -186,7 +197,7 @@ class Progress {
         // ...and then for all the other pages
         await Promise.allSettled(this.awaitedSub)
     }
- 
+
     /**
      * Log that the task has been completed
      */
