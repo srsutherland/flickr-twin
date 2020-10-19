@@ -63,6 +63,8 @@ class Controller {
                 }
                 this.idb.add(response);
                 progress.update();
+            }).catch(() => {
+                progress.error(user_id)
             }))
         }
         // Wait for all the api call promises to settle
