@@ -9,6 +9,33 @@ class FavesDatabase {
     }
 
     /**
+     * Returns true if the db contains the specified id
+     * @param {string} id 
+     * @returns {boolean}
+     */
+    has(id) {
+        return this.db[id] !== undefined;
+    }
+
+    /**
+     * Get an object from db
+     * @param {string} id 
+     * @returns {object}
+     */
+    get(id) {
+        return this.db[id];
+    }
+
+    /**
+     * Set the value of the specified id
+     * @param {string} id 
+     * @param {object} value 
+     */
+    set(id, value) {
+        this.db[id] = value;
+    }
+
+    /**
      * Returns an Array of the contents of the db, sorted by fave count (highest first)
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
@@ -40,7 +67,7 @@ class FavesDatabase {
     trimmedDB(min_faves = 2) {
         let newdb = {};
         for (const key in this.db) {
-            if (this.db[key].favecount >= min_faves) {
+            if (this.get(key).favecount >= min_faves) {
                 newdb[key] = this.db[key];
             }
         }
@@ -90,7 +117,7 @@ class UserDatabase extends FavesDatabase {
     }
 
     addPerson(person) {
-        this.db[person.nsid] = {
+        this.set(person.nsid, {
             nsid: person.nsid,
             realname: person.realname,
             username: person.username,
@@ -99,7 +126,7 @@ class UserDatabase extends FavesDatabase {
                 "https://www.flickr.com/images/buddyicon.gif",
             faves: {},
             favecount: 0,
-        };
+        });
     }
 
     add(json_response) {
@@ -111,14 +138,14 @@ class UserDatabase extends FavesDatabase {
         const photo_id = json_response.photo.id;
         for (const person of people) {
             const nsid = person.nsid;
-            if (this.db[nsid] === undefined) {
+            if (!this.has(nsid)) {
                 this.addPerson(person);
             }
-            if (this.db[nsid].faves[photo_id]) {
+            if (this.get(nsid).faves[photo_id]) {
                 continue;
             }
-            this.db[nsid].faves[photo_id] = person.favedate;
-            this.db[nsid].favecount += 1;
+            this.get(nsid).faves[photo_id] = person.favedate;
+            this.get(nsid).favecount += 1;
         }
     }
 }
@@ -133,7 +160,7 @@ class ImageDatabase extends FavesDatabase {
 
     addPhoto(photo) {
         const owner = typeof photo.owner == "string" ? photo.owner : photo.owner.nsid;
-        this.db[photo.id] = {
+        this.set(photo.id, {
             id: photo.id,
             owner: owner,
             secret: photo.secret,
@@ -141,7 +168,7 @@ class ImageDatabase extends FavesDatabase {
             url: `https://www.flickr.com/photos/${owner}/${photo.id}/`,
             imgUrl: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`,
             favecount: 0,
-        };
+        });
     }
 
     add(json_response) {
@@ -150,16 +177,16 @@ class ImageDatabase extends FavesDatabase {
             return;
         }
         //flickr.photos.getInfo
-        if (json_response.photo && !this.db[json_response.photo.id]) {
+        if (json_response.photo && !this.has(json_response.photo.id)) {
             this.addPhoto(json_response.photo);
         } else { //flickr.favorites.getPublicList
             const photos = json_response.photos.photo;
             for (const photo of photos) {
                 const id = photo.id;
-                if (this.db[id] === undefined) {
+                if (this.has(id)) {
                     this.addPhoto(photo);
                 }
-                this.db[id].favecount += 1;
+                this.get(id).favecount += 1;
             }
         }
     }
