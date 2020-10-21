@@ -46,12 +46,11 @@ class Renderer {
 
     displayImages(image_list) {
         this.addImageCSS();
-        document.body.classList.add("flex");
-        let newHTML = "";
+        let newHTML = `<div class="flex">`;
         for (const img of image_list) {
             newHTML += this.imageHTML(img);
         }
-        document.body.innerHTML = newHTML;
+        document.body.innerHTML = newHTML + `</div>`;
     }
 
     displayImagesByIDs(id_list) {
