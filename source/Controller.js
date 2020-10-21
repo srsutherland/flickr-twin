@@ -57,11 +57,11 @@ class Controller {
                 progress.updatePages(pages);
                 for (let i = 2; i <= pages; i++) {
                     progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
-                        this.idb.add(response);
+                        this.idb.add(response, {user_id:user_id});
                         progress.subUpdate()
                     }))
                 }
-                this.idb.add(response);
+                this.idb.add(response, {user_id:user_id});
                 progress.update();
             }).catch(() => {
                 progress.error(user_id)

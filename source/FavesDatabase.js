@@ -167,11 +167,12 @@ class ImageDatabase extends FavesDatabase {
             server: photo.server,
             url: `https://www.flickr.com/photos/${owner}/${photo.id}/`,
             imgUrl: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`,
+            faved_by: [],
             favecount: 0,
         });
     }
 
-    add(json_response) {
+    add(json_response, opts={}) {
         if (json_response.stat !== "ok") {
             console.log(json_response.stat);
             return;
@@ -187,6 +188,9 @@ class ImageDatabase extends FavesDatabase {
                     this.addPhoto(photo);
                 }
                 this.get(id).favecount += 1;
+                if (opts.user_id) {
+                    this.get(id).faved_by.push(opts.user_id)
+                }
             }
         }
     }
