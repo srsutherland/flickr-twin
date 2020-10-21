@@ -6,6 +6,7 @@ class Renderer {
         this.c = controller;
         this.idb = controller.idb;
         this.udb = controller.udb;
+        this.renderParent = null;
     }
 
     print_results(max_count = 30) {
@@ -69,5 +70,44 @@ class Renderer {
         const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
         const image_list = this.idb.sortedListExcluding(excluding, max_count, starting_from);
         this.displayImages(image_list);
+    }
+
+    paginationArray(cur, max) {
+        const pagelist = []
+        // Flank the current page by 3 adjacent pages, except at the beginning and end
+        const curLeftFlank = Math.min(cur - 3, max - 6)
+        const curRightFlank = Math.max(cur + 3, 7)
+        for (let i = 1; i <= max; i++) {
+            if (i > 2 && i < curLeftFlank) {
+                i = curLeftFlank;
+                pagelist.push("..")
+            } else if (i > curRightFlank && i < max - 2) {
+                i = max - 1
+                pagelist.push("..")
+            }
+            pagelist.push(i)
+            if (pagelist.length > max) break;
+        }
+        return pagelist
+    }
+
+    // todo: remove test code
+    _printPaginationArray(list, cur) {
+        let str = "[<]"
+        for (let i of list) {
+            if (i != cur){
+            str += ` [${ i < 10 ? " " + i : i }]`
+            } else {
+                str += ` *${ i < 10 ? " " + i : i }*`
+            }
+        }
+        console.log(str + "[>]")
+    }
+    
+    // todo: remove test code
+    _testPaginationArray(max) {
+        for (let cur = 1; cur <= max; cur++) {
+            this._printPaginationArray(this.paginationArray(cur,max),cur)
+        }
     }
 }
