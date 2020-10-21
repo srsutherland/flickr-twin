@@ -9,6 +9,12 @@ class Renderer {
         this.renderParent = null;
     }
 
+    clear() {
+        if (this.renderParent == null) this.renderParent = document.body;
+        this.renderParent.innerHTML = "";
+        return this;
+    }
+
     print_results(max_count = 30) {
         let twins_list = this.udb.sortedList(max_count);
 
@@ -51,25 +57,26 @@ class Renderer {
         for (const img of image_list) {
             newHTML += this.imageHTML(img);
         }
-        document.body.innerHTML = newHTML + `</div>`;
+        this.renderParent.innerHTML += newHTML + `</div>`;
+        return this;
     }
 
     displayImagesByIDs(id_list) {
         const image_list = id_list.map(id => this.idb.get(id)).filter(Boolean);
-        this.displayImages(image_list);
+        this.clear().displayImages(image_list);
     }
 
     displayAllImages(max_count = 100, page = 1) {
         const starting_from = (page - 1) * max_count;
         const image_list = this.idb.sortedList(max_count, starting_from);
-        this.displayImages(image_list);
+        this.clear().displayImages(image_list);
     }
 
     displayUnseenImages(max_count = 100, page = 1) {
         const starting_from = (page - 1) * max_count;
         const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
         const image_list = this.idb.sortedListExcluding(excluding, max_count, starting_from);
-        this.displayImages(image_list);
+        this.clear().displayImages(image_list);
     }
 
     paginationArray(cur, max) {
@@ -80,10 +87,10 @@ class Renderer {
         for (let i = 1; i <= max; i++) {
             if (i > 2 && i < curLeftFlank) {
                 i = curLeftFlank;
-                pagelist.push("..")
+                pagelist.push(-1) //converted to dots
             } else if (i > curRightFlank && i < max - 2) {
                 i = max - 1
-                pagelist.push("..")
+                pagelist.push(-1) //converted to dots
             }
             pagelist.push(i)
             if (pagelist.length > max) break;
@@ -95,19 +102,21 @@ class Renderer {
     _printPaginationArray(list, cur) {
         let str = "[<]"
         for (let i of list) {
-            if (i != cur){
-            str += ` [${ i < 10 ? " " + i : i }]`
+            if (i < 1) {
+                str += `[..]`
+            } else if (i != cur) {
+                str += ` [${i < 10 ? " " + i : i}]`
             } else {
-                str += ` *${ i < 10 ? " " + i : i }*`
+                str += ` *${i < 10 ? " " + i : i}*`
             }
         }
         console.log(str + "[>]")
     }
-    
+
     // todo: remove test code
     _testPaginationArray(max) {
         for (let cur = 1; cur <= max; cur++) {
-            this._printPaginationArray(this.paginationArray(cur,max),cur)
+            this._printPaginationArray(this.paginationArray(cur, max), cur)
         }
     }
 }
