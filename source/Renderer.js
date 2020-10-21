@@ -102,12 +102,14 @@ class Renderer {
     _printPaginationArray(list, cur) {
         let str = "[<]"
         for (let i of list) {
-            if (i < 1) {
-                str += `[..]`
-            } else if (i != cur) {
-                str += ` [${i < 10 ? " " + i : i}]`
+            if (i >= 1) {
+                if (i == cur) {
+                    str += ` *${i < 10 ? " " + i : i}*`
+                } else {
+                    str += ` [${i < 10 ? " " + i : i}]`
+                }
             } else {
-                str += ` *${i < 10 ? " " + i : i}*`
+                str += `[..]`
             }
         }
         console.log(str + "[>]")
