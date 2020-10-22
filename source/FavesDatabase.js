@@ -42,9 +42,10 @@ class FavesDatabase {
      * @returns {Array} - The sorted Array
      */
     sortedList(max_count, starting_from = 0) {
+        const end = max_count ? starting_from + max_count : undefined;
         return Object.values(this.db)
             .sort((a, b) => { return b.favecount - a.favecount; })
-            .slice(starting_from, starting_from + max_count);
+            .slice(starting_from, end);
     }
 
     /**
@@ -55,10 +56,11 @@ class FavesDatabase {
      * @returns {Array} - The sorted Array
      */
     sortedListExcluding(exclude_list, max_count, starting_from = 0) {
+        const end = max_count ? starting_from + max_count : undefined;
         return this
             .excluding(exclude_list)
             .sort((a, b) => { return b.favecount - a.favecount; })
-            .slice(starting_from, starting_from + max_count);
+            .slice(starting_from, end);
     }
 
     /**
