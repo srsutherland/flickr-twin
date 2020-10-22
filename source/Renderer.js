@@ -36,6 +36,37 @@ class Renderer {
         return this;
     }
 
+    /**
+     * Render the next page in a paginated display
+     */
+    next() {
+        if (this.displaying.page >= this.displaying.max_page) {
+            return;
+        }
+        this.displaying.page += 1;
+        this.displaying.f.call(this, this.displaying)
+    }
+
+    /**
+     * Render the previous page in a paginated display
+     */
+    previous() {
+        if (this.displaying.page <= 1) {
+            return;
+        }
+        this.displaying.page -= 1;
+        this.displaying.f.call(this, this.displaying)
+    }
+
+    /**
+     * Render the specified page in a paginated display
+     * @param {number | string} page 
+     */
+    gotoPage(page) {
+        this.displaying.page = page;
+        this.displaying.f.call(this, this.displaying)
+    }
+
     print_results(max_count = 30) {
         let twins_list = this.udb.sortedList(max_count);
 
@@ -53,21 +84,29 @@ class Renderer {
             per_page: 50,
             mode: "excluding"
         };
-        opts = {...defaultOpts, ...opts};
+        // Merge opts with default ops
+        opts = { ...defaultOpts, ...opts };
+        // Assign images
+        let images = opts.images
+        if (images == null) {
+            const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
+            images = this.idb.sortedListExcluding(excluding);
+        }
+        // Extract variables
+        const per_page = Number(opts.per_page);
+        opts.page = Number(opts.page);
+        const cur = opts.page;
+        const max = Math.ceil(images.length / per_page);
+        opts.max_page = max;
+        const images_onscreen = images.slice(per_page * (cur - 1), per_page * cur);
+        // Render
         this.addImageCSS()
-        const per_page = opts.per_page;
-        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
-        const images = this.idb.sortedListExcluding(excluding);
-        const cur = opts.page 
-        const max = Math.ceil(images.length / per_page)
-        const images_onscreen = images.slice(per_page * (cur-1), per_page * cur)
-        
         this.clear()
         this.renderPagination(cur, max)
         this.renderImages(images_onscreen)
         this.renderPagination(cur, max)
-        
-        this.displaying = {...opts, images: images, images_onscreen: images_onscreen}
+        // Set state
+        this.displaying = { ...opts, f: this.displayImages, images: images, images_onscreen: images_onscreen }
     }
 
     addImageCSS() {
@@ -152,17 +191,10 @@ class Renderer {
         }
         for (const pagenum of this.paginationArray(cur, max)) {
             if (pagenum >= 1) {
-                if (pagenum == cur) {
-                    newHTML +=
-                        `<a href="#" data-track="pagination${pagenum}Click">
-                            <span class="is-current">${pagenum}</span>
-                        </a>\n`
-                } else {
-                    newHTML +=
-                        `<a href="#" data-track="pagination${pagenum}Click">
-                            <span>${pagenum}</span>
-                        </a>\n`
-                }
+                newHTML +=
+                    `<a href="#" data-track="pagination${pagenum}Click">
+                        <span ${pagenum == cur ? `class="is-current"` : ``}>${pagenum}</span>
+                    </a>\n`
             } else {
                 newHTML += `<span class="moredots">•••</span>\n`
             }
