@@ -7,11 +7,32 @@ class Renderer {
         this.idb = controller.idb;
         this.udb = controller.udb;
         this.renderParent = null;
+        this.displaying = null;
     }
 
+    /**
+     * Clears the render area, or the body if none is assigned
+     * @returns {Renderer} A reference to the calling object
+     */
     clear() {
-        if (this.renderParent == null) this.renderParent = document.body;
+        if (!(this.renderParent instanceof Element)) {
+            this.renderParent = null
+            console.warn("Warning: r.renderParent was not instanceof Element, setting to null")
+        }
+        if (this.renderParent == null) {
+            this.renderParent = document.body;
+        }
         this.renderParent.innerHTML = "";
+        return this;
+    }
+
+    /**
+     * Appends HTML to the render parent node
+     * @param {string} newHTML 
+     * @returns {Renderer} A reference to the calling object
+     */
+    appendHTML(newHTML) {
+        this.renderParent.innerHTML += newHTML;
         return this;
     }
 
@@ -24,6 +45,29 @@ class Renderer {
             const nsid = twin.nsid;
             console.log(`${favecount}: ${name} (https://www.flickr.com/photos/${nsid}/favorites)`);
         }
+    }
+
+    displayImages(opts = {}) {
+        const defaultOpts = {
+            page: 1,
+            per_page: 50,
+            mode: "excluding"
+        };
+        opts = {...defaultOpts, ...opts};
+        this.addImageCSS()
+        const per_page = opts.per_page;
+        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
+        const images = this.idb.sortedListExcluding(excluding);
+        const cur = opts.page 
+        const max = Math.ceil(images.length / per_page)
+        const images_onscreen = images.slice(per_page * (cur-1), per_page * cur)
+        
+        this.clear()
+        this.renderPagination(cur, max)
+        this.renderImages(images_onscreen)
+        this.renderPagination(cur, max)
+        
+        this.displaying = {...opts, images: images, images_onscreen: images_onscreen}
     }
 
     addImageCSS() {
@@ -51,32 +95,32 @@ class Renderer {
     </a>`;
     }
 
-    displayImages(image_list) {
+    renderImages(image_list) {
         this.addImageCSS();
         let newHTML = `<div class="flex">`;
         for (const img of image_list) {
             newHTML += this.imageHTML(img);
         }
-        this.renderParent.innerHTML += newHTML + `</div>`;
+        this.appendHTML(newHTML + `</div>`);
         return this;
     }
 
     displayImagesByIDs(id_list) {
         const image_list = id_list.map(id => this.idb.get(id)).filter(Boolean);
-        this.clear().displayImages(image_list);
+        this.clear().renderImages(image_list);
     }
 
     displayAllImages(max_count = 100, page = 1) {
         const starting_from = (page - 1) * max_count;
         const image_list = this.idb.sortedList(max_count, starting_from);
-        this.clear().displayImages(image_list);
+        this.clear().renderImages(image_list);
     }
 
     displayUnseenImages(max_count = 100, page = 1) {
         const starting_from = (page - 1) * max_count;
         const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
         const image_list = this.idb.sortedListExcluding(excluding, max_count, starting_from);
-        this.clear().displayImages(image_list);
+        this.clear().renderImages(image_list);
     }
 
     paginationArray(cur, max) {
@@ -96,6 +140,45 @@ class Renderer {
             if (pagelist.length > max) break;
         }
         return pagelist
+    }
+
+    paginationHTML(cur, max) {
+        let newHTML = `<div class="pagination-view">`
+        if (cur > 1) {
+            newHTML +=
+                `<a href="#" rel="prev" data-track="paginationLeftClick">
+                    <span><i class="page-arrow"></i></span>
+                </a>\n`
+        }
+        for (const pagenum of this.paginationArray(cur, max)) {
+            if (pagenum >= 1) {
+                if (pagenum == cur) {
+                    newHTML +=
+                        `<a href="#" data-track="pagination${pagenum}Click">
+                            <span class="is-current">${pagenum}</span>
+                        </a>\n`
+                } else {
+                    newHTML +=
+                        `<a href="#" data-track="pagination${pagenum}Click">
+                            <span>${pagenum}</span>
+                        </a>\n`
+                }
+            } else {
+                newHTML += `<span class="moredots">•••</span>\n`
+            }
+        }
+        if (cur < max) {
+            newHTML +=
+                `<a href="#" rel="next" data-track="paginationRightClick">
+                    <span><i class="page-arrow right"></i></span>
+                </a>`
+        }
+        return newHTML + `</div>`;
+    }
+
+    renderPagination(cur, max) {
+        this.appendHTML(this.paginationHTML(cur, max));
+        return this;
     }
 
     // todo: remove test code
