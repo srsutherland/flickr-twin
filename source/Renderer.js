@@ -101,6 +101,7 @@ class Renderer {
         const images_onscreen = images.slice(per_page * (cur - 1), per_page * cur);
         // Render
         this.addImageCSS()
+        this.addPaginationCSS()
         this.clear()
         this.renderPagination(cur, max)
         this.renderImages(images_onscreen)
@@ -113,15 +114,15 @@ class Renderer {
         if (document.getElementById("flickr-twin-img-css") == undefined) {
             document.head.innerHTML +=
                 `<style id="flickr-twin-img-css">
-          .img-container {
-            margin: 5px;
-            background: rgba(84,91,94,.5);
-          }
-          .flex {
-            display: flex;
-            flex-wrap: wrap;
-          }
-        </style>`;
+                    .img-container {
+                        margin: 5px;
+                        background: rgba(84,91,94,.5);
+                    }
+                    .flex {
+                        display: flex;
+                        flex-wrap: wrap;
+                    }
+                </style>`;
         }
     }
 
@@ -185,15 +186,15 @@ class Renderer {
         let newHTML = `<div class="pagination-view">`
         if (cur > 1) {
             newHTML +=
-                `<a href="#" rel="prev" data-track="paginationLeftClick">
+                `<a href="#" rel="prev" data-page="previous">
                     <span><i class="page-arrow"></i></span>
                 </a>\n`
         }
         for (const pagenum of this.paginationArray(cur, max)) {
             if (pagenum >= 1) {
                 newHTML +=
-                    `<a href="#" data-track="pagination${pagenum}Click">
-                        <span ${pagenum == cur ? `class="is-current"` : ``}>${pagenum}</span>
+                    `<a href="#" data-page="${pagenum}">
+                        <span${pagenum == cur ? ` class="is-current"` : ``}>${pagenum}</span>
                     </a>\n`
             } else {
                 newHTML += `<span class="moredots">•••</span>\n`
@@ -201,7 +202,7 @@ class Renderer {
         }
         if (cur < max) {
             newHTML +=
-                `<a href="#" rel="next" data-track="paginationRightClick">
+                `<a href="#" rel="next" data-page="next">
                     <span><i class="page-arrow right"></i></span>
                 </a>`
         }
@@ -213,27 +214,78 @@ class Renderer {
         return this;
     }
 
-    // todo: remove test code
-    _printPaginationArray(list, cur) {
-        let str = "[<]"
-        for (let i of list) {
-            if (i >= 1) {
-                if (i == cur) {
-                    str += ` *${i < 10 ? " " + i : i}*`
-                } else {
-                    str += ` [${i < 10 ? " " + i : i}]`
-                }
-            } else {
-                str += `[..]`
-            }
-        }
-        console.log(str + "[>]")
-    }
-
-    // todo: remove test code
-    _testPaginationArray(max) {
-        for (let cur = 1; cur <= max; cur++) {
-            this._printPaginationArray(this.paginationArray(cur, max), cur)
+    addPaginationCSS() {
+        if (document.getElementById("flickr-twin-page-css") == undefined) {
+            document.head.innerHTML +=
+                `<style id="flickr-twin-page-css">
+                    .pagination-view {
+                        margin: 10px auto;
+                        text-align: center;
+                        min-height: 20px;
+                    }
+                    
+                    .pagination-view a {
+                        text-decoration-color: initial;
+                    }
+                    
+                    .pagination-view a {
+                        text-decoration: none;
+                        display: inline-block;
+                        border-radius: 3px;
+                    }
+                    
+                    .pagination-view span {
+                        color: rgb(157, 149, 136);
+                    }
+                    
+                    .pagination-view span {
+                        display: inline-block;
+                        box-sizing: border-box;
+                        min-width: 32px;
+                        height: 32px;
+                        padding: 0 10px;
+                        line-height: 32px;
+                        color: #898989;
+                        text-align: center;
+                        border-radius: 3px;
+                        cursor: pointer;
+                        vertical-align: top;
+                        transition: background-color .15s ease-in-out;
+                    }
+                    
+                    .pagination-view span.is-current {
+                        background-image: initial;
+                        background-color: rgb(0, 113, 178);
+                        color: rgb(232, 230, 227);
+                    }
+                    
+                    .pagination-view span.is-current {
+                        background: #008ddf;
+                        color: #fff;
+                        font-weight: 600;
+                    }
+                    
+                    .pagination-view a:hover span {
+                        box-shadow: rgb(0, 113, 178) 0px 0px 0px 2px inset;
+                    }
+                    
+                    .pagination-view i {
+                        display: inline-block;
+                        position: relative;
+                        top: 3px;
+                    }
+                    
+                    .pagination-view .page-arrow {
+                        background: url(https://combo.staticflickr.com/ap/build/images/sprites/icons-cc4be245.png) -542px -334px no-repeat;
+                        width: 8px;
+                        height: 18px;
+                    }
+                    
+                    .pagination-view .page-arrow.right {
+                        -webkit-transform: rotate(180deg);
+                        transform: rotate(180deg);
+                    }
+                </style>`;
         }
     }
 }
