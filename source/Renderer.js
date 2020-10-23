@@ -189,6 +189,8 @@ class Renderer {
                 `<a href="#" rel="prev" data-page="previous">
                     <span><i class="page-arrow"></i></span>
                 </a>\n`
+        } else {
+            newHTML += `<span class="disabled"><i class="page-arrow"></i></span>`
         }
         for (const pagenum of this.paginationArray(cur, max)) {
             if (pagenum >= 1) {
@@ -205,12 +207,46 @@ class Renderer {
                 `<a href="#" rel="next" data-page="next">
                     <span><i class="page-arrow right"></i></span>
                 </a>`
+        } else {
+            newHTML += `<span class="disabled"><i class="page-arrow right"></i></span>`
         }
         return newHTML + `</div>`;
     }
 
+    addPaginationListeners() {
+        document.addEventListener("keypress", this.paginationKeypressHandler.bind(this))
+        for (const a of document.querySelectorAll(".pagination-view a")) {
+            a.addEventListener('click', this.paginationClickHandler.bind(this))
+        }
+    }
+
+    paginationClickHandler(event) {
+        let elem = event.target;
+        while (!(elem instanceof HTMLAnchorElement)) {
+            elem = elem.parentElement;
+        }
+        const page = elem.dataset.page;
+        if (page == 'next') {
+            this.next()
+        } else if (page == 'previous' || page == 'prev') {
+            this.previous()
+        } else if (page >= 1) {
+            this.gotoPage(page)
+        }
+    }
+
+    paginationKeypressHandler(event) {
+        const key = event.key;
+        if (key == "ArrowRight") {
+            this.next()
+        } else if (key == "ArrowLeft") {
+            this.previous()
+        }
+    }
+
     renderPagination(cur, max) {
         this.appendHTML(this.paginationHTML(cur, max));
+        this.addPaginationListeners()
         return this;
     }
 
@@ -284,6 +320,10 @@ class Renderer {
                     .pagination-view .page-arrow.right {
                         -webkit-transform: rotate(180deg);
                         transform: rotate(180deg);
+                    }
+
+                    .pagination-view .disabled .page-arrow {
+                        display: none;
                     }
                 </style>`;
         }
