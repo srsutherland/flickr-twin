@@ -8,6 +8,7 @@ class Renderer {
         this.udb = controller.udb;
         this.renderParent = null;
         this.displaying = null;
+        document.addEventListener("keydown", this.paginationKeypressHandler.bind(this))
     }
 
     /**
@@ -214,7 +215,6 @@ class Renderer {
     }
 
     addPaginationListeners() {
-        document.addEventListener("keypress", this.paginationKeypressHandler.bind(this))
         for (const a of document.querySelectorAll(".pagination-view a")) {
             a.addEventListener('click', this.paginationClickHandler.bind(this))
         }
