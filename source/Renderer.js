@@ -82,16 +82,32 @@ class Renderer {
     displayImages(opts = {}) {
         const defaultOpts = {
             page: 1,
-            per_page: 50,
-            mode: "excluding"
+            per_page: 20
         };
         // Merge opts with default ops
         opts = { ...defaultOpts, ...opts };
         // Assign images
         let images = opts.images
         if (images == null) {
-            const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
-            images = this.idb.sortedListExcluding(excluding);
+            if (opts.ids) {
+                images = [...opts.ids].map(id => this.idb.get(id))
+                opts.mode = "by_id"
+            } else if (opts.excluding || opts.mode == "excluding") {
+                const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
+                images = this.idb.sortedListExcluding(excluding);
+                opts.mode = "excluding"
+            } else if (opts.all || opts.mode == "all") {
+                images = this.idb.sortedList()
+                opts.mode = "all"
+            } else {
+                const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
+                images = this.idb.sortedListExcluding(excluding)
+                const minfavecount = images[0].favecount / 5
+                if (images[0].favecount > 2) {
+                    images = images.filter(i => i.favecount > minfavecount);
+                }
+                opts.mode = "default"
+            }
         }
         // Extract variables
         const per_page = Number(opts.per_page);
@@ -148,19 +164,7 @@ class Renderer {
 
     displayImagesByIDs(id_list) {
         const image_list = id_list.map(id => this.idb.get(id)).filter(Boolean);
-        this.clear().renderImages(image_list);
-    }
-
-    displayAllImages(max_count = 100, page = 1) {
-        const starting_from = (page - 1) * max_count;
-        const image_list = this.idb.sortedList(max_count, starting_from);
-        this.clear().renderImages(image_list);
-    }
-
-    displayUnseenImages(max_count = 100, page = 1) {
-        const starting_from = (page - 1) * max_count;
-        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
-        const image_list = this.idb.sortedListExcluding(excluding, max_count, starting_from);
+        this.displaying = {images: image_list}
         this.clear().renderImages(image_list);
     }
 
