@@ -68,6 +68,10 @@ class Renderer {
         this.displaying.f.call(this, this.displaying)
     }
 
+    /**
+     * Print the top result for user twins to the console
+     * @param {number} max_count - Number of users to print
+     */
     print_results(max_count = 30) {
         let twins_list = this.udb.sortedList(max_count);
 
@@ -127,6 +131,9 @@ class Renderer {
         this.displaying = { ...opts, f: this.displayImages, images: images, images_onscreen: images_onscreen }
     }
 
+    /**
+     * Add CSS to the document for styling the image view
+     */
     addImageCSS() {
         if (document.getElementById("flickr-twin-img-css") == undefined) {
             document.head.innerHTML +=
@@ -143,15 +150,30 @@ class Renderer {
         }
     }
 
+    /**
+     * Return the html represention of a given image
+     * @param {Object} img - An object representing a Flickr image, with the following properties:
+     *      imgUrl - Url leading to the image file at a thumbnail resolution 
+     *          (`https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`)
+     *      url - Url of the image page 
+     *          (`https://www.flickr.com/photos/${owner.nsid}/${photo.id}/`)
+     *      favecount (optional) - Number of faves (by processed users) the image has received 
+     * @returns {string} - A string of the html to display the given object
+     */
     imageHTML(img) {
         return `<a href="${img.url}">
-      <div class="img-container">
-        <div><img src="${img.imgUrl}"></div>
-        <div>${img.favecount} faves</div>
-      </div>
-    </a>`;
+                <div class="img-container">
+                    <div><img src="${img.imgUrl}"></div>
+                    <div>${img.favecount ? img.favecount + " faves" : ""}</div>
+                </div>
+                </a>`;
     }
 
+    /**
+     * Renders each of the given images in the render area
+     * @param {Array} image_list - List of images to display
+     * @returns {Renderer} - A reference to this Renderer
+     */
     renderImages(image_list) {
         this.addImageCSS();
         let newHTML = `<div class="flex">`;
@@ -164,10 +186,18 @@ class Renderer {
 
     displayImagesByIDs(id_list) {
         const image_list = id_list.map(id => this.idb.get(id)).filter(Boolean);
-        this.displaying = {images: image_list}
+        this.displaying = { images: image_list }
         this.clear().renderImages(image_list);
     }
 
+    /**
+     * Returns an array representing which page buttons to display, similar to the way Flickr
+     *  does pagination. Always displays the first two pages, 7 pages adjacent to the current page,
+     *  and the last two pages. Omitted pages are represented by a single item of "-1"
+     * @param {number} cur - Current page 
+     * @param {number} max - Total number of pages
+     * @returns {Array} - Array of numbers
+     */
     paginationArray(cur, max) {
         const pagelist = []
         // Flank the current page by 3 adjacent pages, except at the beginning and end
@@ -187,6 +217,12 @@ class Renderer {
         return pagelist
     }
 
+    /**
+     * Returns the html to display pagination buttons
+     * @param {number} cur - Current page 
+     * @param {number} max - Total number of pages
+     * @returns {string} - Pagination HTML
+     */
     paginationHTML(cur, max) {
         let newHTML = `<div class="pagination-view">`
         if (cur > 1) {
@@ -218,15 +254,22 @@ class Renderer {
         return newHTML + `</div>`;
     }
 
+    /**
+     * Attach listeners and handlers to each pagination button
+     */
     addPaginationListeners() {
         for (const a of document.querySelectorAll(".pagination-view a")) {
             a.addEventListener('click', this.paginationClickHandler.bind(this))
         }
     }
 
+    /**
+     * Handle clicks on pagination buttons
+     * @param {MouseEvent} event - The triggering mouse click
+     */
     paginationClickHandler(event) {
         let elem = event.target;
-        while (!(elem instanceof HTMLAnchorElement)) {
+        while (elem.dataset.page == undefined) {
             elem = elem.parentElement;
         }
         const page = elem.dataset.page;
@@ -239,6 +282,10 @@ class Renderer {
         }
     }
 
+    /**
+     * Handles pagination using the left and right arrow keys
+     * @param {KeyboardEvent} event - The triggering keydown event
+     */
     paginationKeypressHandler(event) {
         const key = event.key;
         if (key == "ArrowRight") {
@@ -248,12 +295,21 @@ class Renderer {
         }
     }
 
+    /**
+     * Renders the pagination for the current display
+     * @param {number} cur - Current page 
+     * @param {number} max - Total number of pages
+     * @returns {Renderer} - A reference to this Renderer
+     */
     renderPagination(cur, max) {
         this.appendHTML(this.paginationHTML(cur, max));
         this.addPaginationListeners()
         return this;
     }
 
+    /**
+     * Add CSS to the document for styling the pagination buttons
+     */
     addPaginationCSS() {
         if (document.getElementById("flickr-twin-page-css") == undefined) {
             document.head.innerHTML +=
