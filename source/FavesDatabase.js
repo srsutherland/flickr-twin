@@ -36,6 +36,30 @@ class FavesDatabase {
     }
 
     /**
+     * Returns an Array containing the all keys (ids) in the db
+     * @returns {Array}
+     */
+    keys() {
+        return Object.keys(this.db)
+    }
+    
+    /**
+     * Returns an Array containing the all values in the db
+     * @returns {Array}
+     */
+    values() {
+        return Object.values(this.db)
+    }
+
+    /**
+     * Returns an Array of [key, value] pairs for each item in the db
+     * @returns {Array} 
+     */
+    entries() {
+        return Object.entries(this.db)
+    }
+
+    /**
      * Returns an Array of the contents of the db, sorted by fave count (highest first)
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
@@ -43,7 +67,7 @@ class FavesDatabase {
      */
     sortedList(max_count, starting_from = 0) {
         const end = max_count ? starting_from + max_count : undefined;
-        return Object.values(this.db)
+        return this.values()
             .sort((a, b) => { return b.favecount - a.favecount; })
             .slice(starting_from, end);
     }
@@ -68,9 +92,9 @@ class FavesDatabase {
      */
     trimmedDB(min_faves = 2) {
         let newdb = {};
-        for (const key in this.db) {
+        for (const key of this.keys()) {
             if (this.get(key).favecount >= min_faves) {
-                newdb[key] = this.db[key];
+                newdb[key] = this.get(key);
             }
         }
         return newdb;
@@ -90,7 +114,7 @@ class FavesDatabase {
         } else {
             throw (new TypeError("exclude_list must be an array or set"))
         }
-        return Object.values(this.db).filter(
+        return this.values().filter(
             (item) => !exclude_set.has(item.id || item.nsid)
         )
     }
