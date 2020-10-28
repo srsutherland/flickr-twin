@@ -7,9 +7,9 @@ class Controller {
         this.api = new FlickrAPI();
         this.udb = new UserDatabase();
         this.idb = new ImageDatabase();
-        this.processed_images = new Set();
-        this.excluded = new Set();
-        this.hidden = new Set();
+        this._processed_images = new Set();
+        this._excluded = new Set();
+        this._hidden = new Set();
         this.r = new Renderer(this);
         /* eslint-enable no-undef */
     }
@@ -17,11 +17,11 @@ class Controller {
     async processPhotos(photo_ids) {
         const progress = new Progress(photo_ids.length);
         for (const photo_id of photo_ids) {
-            if (this.processed_images.has(photo_id)) {
+            if (this._processed_images.has(photo_id)) {
                 progress.duplicate(photo_id);
                 continue;
             }
-            this.processed_images.add(photo_id);
+            this._processed_images.add(photo_id);
             //Load the first page of faves for each image, get total number of pages
             progress.await(this.api.getImageFavorites(photo_id).then((response) => {
                 const pages = response.photo.pages;
@@ -36,9 +36,9 @@ class Controller {
                 }
                 this.udb.add(response);
                 progress.update(`${photo_id} ${1}`); //TODO remove debugging info
-            }).catch(() => {
-                this.processed_images.delete(photo_id)
-                progress.error(photo_id)
+            }).catch(error => {
+                this._processed_images.delete(photo_id)
+                progress.error(photo_id, error)
             }));
         }
         // Wait for all the api call promises to settle
@@ -57,14 +57,14 @@ class Controller {
                 progress.updatePages(pages);
                 for (let i = 2; i <= pages; i++) {
                     progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
-                        this.idb.add(response, {user_id:user_id});
+                        this.idb.add(response, { user_id: user_id });
                         progress.subUpdate()
                     }))
                 }
-                this.idb.add(response, {user_id:user_id});
+                this.idb.add(response, { user_id: user_id });
                 progress.update();
-            }).catch(() => {
-                progress.error(user_id)
+            }).catch(error => {
+                progress.error(user_id, error)
             }))
         }
         // Wait for all the api call promises to settle
@@ -100,16 +100,40 @@ class Controller {
         progress.done()
     }
 
+    /**
+     * Exclude ids from the process
+     * @param {Iterable} list - List of ids to exclude
+     */
     exclude(list) {
         for (const i of list) {
-            this.excluded.add(i);
+            this._excluded.add(i);
         }
     }
 
+    /**
+     * Hide ids from being displayed by the renderer
+     * @param {Iterable} list - List of ids to hide
+     */
     hide(list) {
         for (const i of list) {
-            this.hidden.add(i);
+            this._hidden.add(i);
         }
+    }
+
+    /**
+     * @returns {Set} - Set of all the ids which should be hidden
+     */
+    getHidden() {
+        return Set([...this._processed_images, ...this._excluded, ...this._hidden])
+    }
+
+    /**
+     * Returns true if the given id should be hidden
+     * @param {string} id - Photo id to check 
+     * @returns {boolean}
+     */
+    isHidden(id) {
+        return this._processed_images.has(id) || this._excluded.has(id) || this._hidden.has(id)
     }
 }
 
@@ -166,10 +190,10 @@ class Progress {
         }
     }
 
-    error(input_id) {
+    error(input_id, msg) {
         this.errors += 1
         if (input_id) {
-            console.error(`Error processing ${input_id}`);
+            console.error(`Error processing ${input_id}${msg ? ": " + msg : ""}`);
         }
     }
 

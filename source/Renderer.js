@@ -8,6 +8,7 @@ class Renderer {
         this.udb = controller.udb;
         this.renderParent = null;
         this.displaying = null;
+        // Left and right arrow key pagination
         document.addEventListener("keydown", this.paginationKeypressHandler.bind(this))
     }
 
@@ -97,15 +98,13 @@ class Renderer {
                 images = [...opts.ids].map(id => this.idb.get(id))
                 opts.mode = "by_id"
             } else if (opts.excluding || opts.mode == "excluding") {
-                const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
-                images = this.idb.sortedListExcluding(excluding);
+                images = this.idb.sortedListExcluding(this.c.hidden());
                 opts.mode = "excluding"
             } else if (opts.all || opts.mode == "all") {
                 images = this.idb.sortedList()
                 opts.mode = "all"
             } else {
-                const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
-                images = this.idb.sortedListExcluding(excluding)
+                images = this.idb.sortedListExcluding(this.c.hidden())
                 const minfavecount = images[0].favecount / 5
                 if (images[0].favecount > 2) {
                     images = images.filter(i => i.favecount > minfavecount);
@@ -185,14 +184,14 @@ class Renderer {
     }
 
     displayImagesByIDs(id_list) {
-        const image_list = id_list.map(id => this.idb.get(id)).filter(Boolean);
+        const image_list = id_list.map(id => this.idb.get(id)).filter(img => img != null);
         this.displaying = { images: image_list }
         this.clear().renderImages(image_list);
     }
 
     /**
      * Returns an array representing which page buttons to display, similar to the way Flickr
-     *  does pagination. Always displays the first two pages, 7 pages adjacent to the current page,
+     *  shows pagination. Always displays the first two pages, 7 pages adjacent to the current page,
      *  and the last two pages. Omitted pages are represented by a single item of "-1"
      * @param {number} cur - Current page 
      * @param {number} max - Total number of pages
@@ -225,7 +224,8 @@ class Renderer {
      */
     paginationHTML(cur, max) {
         let newHTML = `<div class="pagination-view">`
-        if (cur > 1) {
+        // Left arrow
+        if (cur > 1) { // Don't display on first page
             newHTML +=
                 `<a href="#" rel="prev" data-page="previous">
                     <span><i class="page-arrow"></i></span>
@@ -233,17 +233,19 @@ class Renderer {
         } else {
             newHTML += `<span class="disabled"><i class="page-arrow"></i></span>`
         }
+        // Numbered buttons
         for (const pagenum of this.paginationArray(cur, max)) {
-            if (pagenum >= 1) {
+            if (pagenum >= 1) { // Real page
                 newHTML +=
                     `<a href="#" data-page="${pagenum}">
                         <span${pagenum == cur ? ` class="is-current"` : ``}>${pagenum}</span>
                     </a>\n`
-            } else {
+            } else { // -1, i.e. dots
                 newHTML += `<span class="moredots">•••</span>\n`
             }
         }
-        if (cur < max) {
+        // Right arrow
+        if (cur < max) { // Don't display on last page
             newHTML +=
                 `<a href="#" rel="next" data-page="next">
                     <span><i class="page-arrow right"></i></span>
