@@ -49,27 +49,39 @@ class Controller {
     async processUsers(user_ids) {
         const progress = new Progress(user_ids.length);
         for (const user_id of user_ids) {
-            progress.await(this.api.getUserFavorites(user_id).then((response) => {
-                const pages = Math.min(response.photos.pages, 50);
-                if (response.photos.pages > 50) {
-                    console.warn(`user ${user_id} has more than 50 pages of favorites`)
-                }
-                progress.updatePages(pages);
-                for (let i = 2; i <= pages; i++) {
-                    progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
-                        this.idb.add(response, { user_id: user_id });
-                        progress.subUpdate()
-                    }))
-                }
-                this.idb.add(response, { user_id: user_id });
-                progress.update();
-            }).catch(error => {
-                progress.error(user_id, error)
-            }))
+            progress.await(this.loadUser(user_id, {progress: progress}))
         }
         // Wait for all the api call promises to settle
         await progress.allSettled();
         progress.done();
+    }
+
+    async loadUser(user_id, opts = {}) {
+        const progress = opts.progress || new Progress(1)
+        const idb = opts.idb || this.idb
+        // Load the first page of faves for each user, get the total number of pages
+        await this.api.getUserFavorites(user_id).then((response) => {
+            const pages = Math.min(response.photos.pages, opts.max_pages || 50);
+            if (response.photos.pages > 50) {
+                console.warn(`user ${user_id} has more than 50 pages of favorites`)
+            }
+            progress.updatePages(pages);
+            // Load each subpage
+            for (let i = 2; i <= pages; i++) {
+                progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
+                    idb.add(response, { user_id: user_id });
+                    progress.subUpdate()
+                }))
+            }
+            idb.add(response, { user_id: user_id });
+            progress.update();
+        }).catch(error => {
+            progress.error(user_id, error)
+        })
+        if (!opts.progress) {
+            progress.done()
+        }
+        return idb;
     }
 
     async processUsersFromDB(num = 20) {
@@ -124,7 +136,7 @@ class Controller {
      * @returns {Set} - Set of all the ids which should be hidden
      */
     getHidden() {
-        return Set([...this._processed_images, ...this._excluded, ...this._hidden])
+        return new Set([...this._processed_images, ...this._excluded, ...this._hidden])
     }
 
     /**
