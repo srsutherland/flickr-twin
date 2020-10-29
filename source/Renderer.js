@@ -98,13 +98,13 @@ class Renderer {
                 images = [...opts.ids].map(id => this.idb.get(id))
                 opts.mode = "by_id"
             } else if (opts.excluding || opts.mode == "excluding") {
-                images = this.idb.sortedListExcluding(this.c.hidden());
+                images = this.idb.sortedListExcluding(this.c.getHidden());
                 opts.mode = "excluding"
             } else if (opts.all || opts.mode == "all") {
                 images = this.idb.sortedList()
                 opts.mode = "all"
             } else {
-                images = this.idb.sortedListExcluding(this.c.hidden())
+                images = this.idb.sortedListExcluding(this.c.getHidden())
                 const minfavecount = images[0].favecount / 5
                 if (images[0].favecount > 2) {
                     images = images.filter(i => i.favecount > minfavecount);
