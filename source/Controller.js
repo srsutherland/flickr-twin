@@ -84,6 +84,12 @@ class Controller {
         return idb;
     }
 
+    async processPhotosFromUser(user_id) {
+        // Done in one step to allow idb to be garbage collected immediately
+        const photo_ids = (await this.loadUser(user_id)).keys()  
+        await this.processPhotos(photo_ids)
+    }
+
     async processUsersFromDB(num = 20) {
         const users = this.udb.sortedList(num).map(user => user.nsid)
         await this.processUsers(users);
