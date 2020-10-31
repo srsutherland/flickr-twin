@@ -145,6 +145,7 @@ class UserDatabase extends FavesDatabase {
     addPerson(person) {
         this.set(person.nsid, {
             nsid: person.nsid,
+            name: person.realname ? person.realname : person.username,
             realname: person.realname,
             username: person.username,
             buddyicon: person.iconserver > 0 ?

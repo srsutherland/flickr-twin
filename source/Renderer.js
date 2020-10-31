@@ -183,10 +183,36 @@ class Renderer {
         return this;
     }
 
+    /**
+     * Takes a list of image ids and displays them all on a single page.
+     * @param {Array} id_list 
+     */
     displayImagesByIDs(id_list) {
         const image_list = id_list.map(id => this.idb.get(id)).filter(img => img != null);
         this.displaying = { images: image_list }
         this.clear().renderImages(image_list);
+    }
+
+    userHTML(user) {
+        return `
+        <li class="person">
+            <a href="//:www.flickr.com/photos/${user.nsid}/favorites/">
+                <span class="person-icon">
+                    <span class="circle-icon">
+                        <img src="${user.buddyicon}" width="30"
+                            height="30">
+                    </span>
+                    <span class="person-name">
+                        <span class="person-displayname">${user.name}</span>
+                        <span class="person-username">${user.username}</span>
+                    </span>
+                    <span class="person-favecount">
+                        (${user.favecount})
+                    </span>
+                </span>
+            </a>
+        </li>
+        `
     }
 
     /**
