@@ -120,6 +120,16 @@ class FavesDatabase {
     }
 
     /**
+     * Clear the faves for all items, leaving photo/user data (for rendering purposes)
+     */
+    clearFaves() {
+        for (const item of this.db) {
+            item.faves = {}
+            item.favecount = 0;
+        }
+    }
+
+    /**
      * Copy db to localstorage (may be too large)
      */
     store() {
