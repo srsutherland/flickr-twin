@@ -170,6 +170,30 @@ class FavesDatabase {
     }
 
     /**
+     * Returns an Array containing the all keys (ids) in the db
+     * @returns {Array}
+     */
+    keys() {
+        return Object.keys(this.db)
+    }
+    
+    /**
+     * Returns an Array containing the all values in the db
+     * @returns {Array}
+     */
+    values() {
+        return Object.values(this.db)
+    }
+
+    /**
+     * Returns an Array of [key, value] pairs for each item in the db
+     * @returns {Array} 
+     */
+    entries() {
+        return Object.entries(this.db)
+    }
+
+    /**
      * Returns an Array of the contents of the db, sorted by fave count (highest first)
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
@@ -177,7 +201,7 @@ class FavesDatabase {
      */
     sortedList(max_count, starting_from = 0) {
         const end = max_count ? starting_from + max_count : undefined;
-        return Object.values(this.db)
+        return this.values()
             .sort((a, b) => { return b.favecount - a.favecount; })
             .slice(starting_from, end);
     }
@@ -202,9 +226,9 @@ class FavesDatabase {
      */
     trimmedDB(min_faves = 2) {
         let newdb = {};
-        for (const key in this.db) {
+        for (const key of this.keys()) {
             if (this.get(key).favecount >= min_faves) {
-                newdb[key] = this.db[key];
+                newdb[key] = this.get(key);
             }
         }
         return newdb;
@@ -224,7 +248,7 @@ class FavesDatabase {
         } else {
             throw (new TypeError("exclude_list must be an array or set"))
         }
-        return Object.values(this.db).filter(
+        return this.values().filter(
             (item) => !exclude_set.has(item.id || item.nsid)
         )
     }
@@ -342,6 +366,7 @@ class Renderer {
         this.udb = controller.udb;
         this.renderParent = null;
         this.displaying = null;
+        // Left and right arrow key pagination
         document.addEventListener("keydown", this.paginationKeypressHandler.bind(this))
     }
 
@@ -402,6 +427,10 @@ class Renderer {
         this.displaying.f.call(this, this.displaying)
     }
 
+    /**
+     * Print the top result for user twins to the console
+     * @param {number} max_count - Number of users to print
+     */
     print_results(max_count = 30) {
         let twins_list = this.udb.sortedList(max_count);
 
@@ -416,16 +445,30 @@ class Renderer {
     displayImages(opts = {}) {
         const defaultOpts = {
             page: 1,
-            per_page: 50,
-            mode: "excluding"
+            per_page: 20
         };
         // Merge opts with default ops
         opts = { ...defaultOpts, ...opts };
         // Assign images
         let images = opts.images
         if (images == null) {
-            const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
-            images = this.idb.sortedListExcluding(excluding);
+            if (opts.ids) {
+                images = [...opts.ids].map(id => this.idb.get(id))
+                opts.mode = "by_id"
+            } else if (opts.excluding || opts.mode == "excluding") {
+                images = this.idb.sortedListExcluding(this.c.getHidden());
+                opts.mode = "excluding"
+            } else if (opts.all || opts.mode == "all") {
+                images = this.idb.sortedList()
+                opts.mode = "all"
+            } else {
+                images = this.idb.sortedListExcluding(this.c.getHidden())
+                const minfavecount = images[0].favecount / 5
+                if (images[0].favecount > 2) {
+                    images = images.filter(i => i.favecount > minfavecount);
+                }
+                opts.mode = "default"
+            }
         }
         // Extract variables
         const per_page = Number(opts.per_page);
@@ -445,6 +488,9 @@ class Renderer {
         this.displaying = { ...opts, f: this.displayImages, images: images, images_onscreen: images_onscreen }
     }
 
+    /**
+     * Add CSS to the document for styling the image view
+     */
     addImageCSS() {
         if (document.getElementById("flickr-twin-img-css") == undefined) {
             document.head.innerHTML +=
@@ -461,15 +507,30 @@ class Renderer {
         }
     }
 
+    /**
+     * Return the html represention of a given image
+     * @param {Object} img - An object representing a Flickr image, with the following properties:
+     *      imgUrl - Url leading to the image file at a thumbnail resolution 
+     *          (`https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`)
+     *      url - Url of the image page 
+     *          (`https://www.flickr.com/photos/${owner.nsid}/${photo.id}/`)
+     *      favecount (optional) - Number of faves (by processed users) the image has received 
+     * @returns {string} - A string of the html to display the given object
+     */
     imageHTML(img) {
         return `<a href="${img.url}">
-      <div class="img-container">
-        <div><img src="${img.imgUrl}"></div>
-        <div>${img.favecount} faves</div>
-      </div>
-    </a>`;
+                <div class="img-container">
+                    <div><img src="${img.imgUrl}"></div>
+                    <div>${img.favecount ? img.favecount + " faves" : ""}</div>
+                </div>
+                </a>`;
     }
 
+    /**
+     * Renders each of the given images in the render area
+     * @param {Array} image_list - List of images to display
+     * @returns {Renderer} - A reference to this Renderer
+     */
     renderImages(image_list) {
         this.addImageCSS();
         let newHTML = `<div class="flex">`;
@@ -481,23 +542,19 @@ class Renderer {
     }
 
     displayImagesByIDs(id_list) {
-        const image_list = id_list.map(id => this.idb.get(id)).filter(Boolean);
+        const image_list = id_list.map(id => this.idb.get(id)).filter(img => img != null);
+        this.displaying = { images: image_list }
         this.clear().renderImages(image_list);
     }
 
-    displayAllImages(max_count = 100, page = 1) {
-        const starting_from = (page - 1) * max_count;
-        const image_list = this.idb.sortedList(max_count, starting_from);
-        this.clear().renderImages(image_list);
-    }
-
-    displayUnseenImages(max_count = 100, page = 1) {
-        const starting_from = (page - 1) * max_count;
-        const excluding = [...this.c.processed_images, ...this.c.excluded, ...this.c.hidden];
-        const image_list = this.idb.sortedListExcluding(excluding, max_count, starting_from);
-        this.clear().renderImages(image_list);
-    }
-
+    /**
+     * Returns an array representing which page buttons to display, similar to the way Flickr
+     *  shows pagination. Always displays the first two pages, 7 pages adjacent to the current page,
+     *  and the last two pages. Omitted pages are represented by a single item of "-1"
+     * @param {number} cur - Current page 
+     * @param {number} max - Total number of pages
+     * @returns {Array} - Array of numbers
+     */
     paginationArray(cur, max) {
         const pagelist = []
         // Flank the current page by 3 adjacent pages, except at the beginning and end
@@ -517,9 +574,16 @@ class Renderer {
         return pagelist
     }
 
+    /**
+     * Returns the html to display pagination buttons
+     * @param {number} cur - Current page 
+     * @param {number} max - Total number of pages
+     * @returns {string} - Pagination HTML
+     */
     paginationHTML(cur, max) {
         let newHTML = `<div class="pagination-view">`
-        if (cur > 1) {
+        // Left arrow
+        if (cur > 1) { // Don't display on first page
             newHTML +=
                 `<a href="#" rel="prev" data-page="previous">
                     <span><i class="page-arrow"></i></span>
@@ -527,17 +591,19 @@ class Renderer {
         } else {
             newHTML += `<span class="disabled"><i class="page-arrow"></i></span>`
         }
+        // Numbered buttons
         for (const pagenum of this.paginationArray(cur, max)) {
-            if (pagenum >= 1) {
+            if (pagenum >= 1) { // Real page
                 newHTML +=
                     `<a href="#" data-page="${pagenum}">
                         <span${pagenum == cur ? ` class="is-current"` : ``}>${pagenum}</span>
                     </a>\n`
-            } else {
+            } else { // -1, i.e. dots
                 newHTML += `<span class="moredots">•••</span>\n`
             }
         }
-        if (cur < max) {
+        // Right arrow
+        if (cur < max) { // Don't display on last page
             newHTML +=
                 `<a href="#" rel="next" data-page="next">
                     <span><i class="page-arrow right"></i></span>
@@ -548,15 +614,22 @@ class Renderer {
         return newHTML + `</div>`;
     }
 
+    /**
+     * Attach listeners and handlers to each pagination button
+     */
     addPaginationListeners() {
         for (const a of document.querySelectorAll(".pagination-view a")) {
             a.addEventListener('click', this.paginationClickHandler.bind(this))
         }
     }
 
+    /**
+     * Handle clicks on pagination buttons
+     * @param {MouseEvent} event - The triggering mouse click
+     */
     paginationClickHandler(event) {
         let elem = event.target;
-        while (!(elem instanceof HTMLAnchorElement)) {
+        while (elem.dataset.page == undefined) {
             elem = elem.parentElement;
         }
         const page = elem.dataset.page;
@@ -569,6 +642,10 @@ class Renderer {
         }
     }
 
+    /**
+     * Handles pagination using the left and right arrow keys
+     * @param {KeyboardEvent} event - The triggering keydown event
+     */
     paginationKeypressHandler(event) {
         const key = event.key;
         if (key == "ArrowRight") {
@@ -578,12 +655,21 @@ class Renderer {
         }
     }
 
+    /**
+     * Renders the pagination for the current display
+     * @param {number} cur - Current page 
+     * @param {number} max - Total number of pages
+     * @returns {Renderer} - A reference to this Renderer
+     */
     renderPagination(cur, max) {
         this.appendHTML(this.paginationHTML(cur, max));
         this.addPaginationListeners()
         return this;
     }
 
+    /**
+     * Add CSS to the document for styling the pagination buttons
+     */
     addPaginationCSS() {
         if (document.getElementById("flickr-twin-page-css") == undefined) {
             document.head.innerHTML +=
@@ -673,9 +759,9 @@ class Controller {
         this.api = new FlickrAPI();
         this.udb = new UserDatabase();
         this.idb = new ImageDatabase();
-        this.processed_images = new Set();
-        this.excluded = new Set();
-        this.hidden = new Set();
+        this._processed_images = new Set();
+        this._excluded = new Set();
+        this._hidden = new Set();
         this.r = new Renderer(this);
         /* eslint-enable no-undef */
     }
@@ -683,11 +769,11 @@ class Controller {
     async processPhotos(photo_ids) {
         const progress = new Progress(photo_ids.length);
         for (const photo_id of photo_ids) {
-            if (this.processed_images.has(photo_id)) {
+            if (this._processed_images.has(photo_id)) {
                 progress.duplicate(photo_id);
                 continue;
             }
-            this.processed_images.add(photo_id);
+            this._processed_images.add(photo_id);
             //Load the first page of faves for each image, get total number of pages
             progress.await(this.api.getImageFavorites(photo_id).then((response) => {
                 const pages = response.photo.pages;
@@ -702,9 +788,9 @@ class Controller {
                 }
                 this.udb.add(response);
                 progress.update(`${photo_id} ${1}`); //TODO remove debugging info
-            }).catch(() => {
-                this.processed_images.delete(photo_id)
-                progress.error(photo_id)
+            }).catch(error => {
+                this._processed_images.delete(photo_id)
+                progress.error(photo_id, error)
             }));
         }
         // Wait for all the api call promises to settle
@@ -715,27 +801,45 @@ class Controller {
     async processUsers(user_ids) {
         const progress = new Progress(user_ids.length);
         for (const user_id of user_ids) {
-            progress.await(this.api.getUserFavorites(user_id).then((response) => {
-                const pages = Math.min(response.photos.pages, 50);
-                if (response.photos.pages > 50) {
-                    console.warn(`user ${user_id} has more than 50 pages of favorites`)
-                }
-                progress.updatePages(pages);
-                for (let i = 2; i <= pages; i++) {
-                    progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
-                        this.idb.add(response, {user_id:user_id});
-                        progress.subUpdate()
-                    }))
-                }
-                this.idb.add(response, {user_id:user_id});
-                progress.update();
-            }).catch(() => {
-                progress.error(user_id)
-            }))
+            progress.await(this.loadUser(user_id, {progress: progress}))
         }
         // Wait for all the api call promises to settle
         await progress.allSettled();
         progress.done();
+    }
+
+    async loadUser(user_id, opts = {}) {
+        const progress = opts.progress || new Progress(1)
+        const idb = opts.idb || this.idb
+        // Load the first page of faves for each user, get the total number of pages
+        await this.api.getUserFavorites(user_id).then((response) => {
+            const pages = Math.min(response.photos.pages, opts.max_pages || 50);
+            if (response.photos.pages > 50) {
+                console.warn(`user ${user_id} has more than 50 pages of favorites`)
+            }
+            progress.updatePages(pages);
+            // Load each subpage
+            for (let i = 2; i <= pages; i++) {
+                progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
+                    idb.add(response, { user_id: user_id });
+                    progress.subUpdate()
+                }))
+            }
+            idb.add(response, { user_id: user_id });
+            progress.update();
+        }).catch(error => {
+            progress.error(user_id, error)
+        })
+        if (!opts.progress) {
+            progress.done()
+        }
+        return idb;
+    }
+
+    async processPhotosFromUser(user_id) {
+        // Done in one step to allow idb to be garbage collected immediately
+        const photo_ids = (await this.loadUser(user_id)).keys()  
+        await this.processPhotos(photo_ids)
     }
 
     async processUsersFromDB(num = 20) {
@@ -766,16 +870,40 @@ class Controller {
         progress.done()
     }
 
+    /**
+     * Exclude ids from the process
+     * @param {Iterable} list - List of ids to exclude
+     */
     exclude(list) {
         for (const i of list) {
-            this.excluded.add(i);
+            this._excluded.add(i);
         }
     }
 
+    /**
+     * Hide ids from being displayed by the renderer
+     * @param {Iterable} list - List of ids to hide
+     */
     hide(list) {
         for (const i of list) {
-            this.hidden.add(i);
+            this._hidden.add(i);
         }
+    }
+
+    /**
+     * @returns {Set} - Set of all the ids which should be hidden
+     */
+    getHidden() {
+        return new Set([...this._processed_images, ...this._excluded, ...this._hidden])
+    }
+
+    /**
+     * Returns true if the given id should be hidden
+     * @param {string} id - Photo id to check 
+     * @returns {boolean}
+     */
+    isHidden(id) {
+        return this._processed_images.has(id) || this._excluded.has(id) || this._hidden.has(id)
     }
 }
 
@@ -832,10 +960,10 @@ class Progress {
         }
     }
 
-    error(input_id) {
+    error(input_id, msg) {
         this.errors += 1
         if (input_id) {
-            console.error(`Error processing ${input_id}`);
+            console.error(`Error processing ${input_id}${msg ? ": " + msg : ""}`);
         }
     }
 
