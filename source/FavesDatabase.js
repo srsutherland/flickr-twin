@@ -124,7 +124,8 @@ class FavesDatabase {
      */
     clearFaves() {
         for (const item of this.db) {
-            item.faves = {}
+            if (item.faves) item.faves = {};
+            if (item.faved_by) item.faved_by = [];
             item.favecount = 0;
         }
     }
@@ -155,10 +156,10 @@ class UserDatabase extends FavesDatabase {
     addPerson(person) {
         this.set(person.nsid, {
             nsid: person.nsid,
-            name: person.realname ? person.realname : person.username,
+            name: person.name || person.realname || person.username,
             realname: person.realname,
             username: person.username,
-            buddyicon: person.iconserver > 0 ?
+            buddyicon: person.buddyicon || person.iconserver > 0 ?
                 `http://farm${person.iconfarm}.staticflickr.com/${person.iconserver}/buddyicons/${person.nsid}.jpg` :
                 "https://www.flickr.com/images/buddyicon.gif",
             faves: {},
