@@ -86,7 +86,8 @@ class Controller {
 
     async processPhotosFromUser(user_id) {
         // Done in one step to allow idb to be garbage collected immediately
-        const photo_ids = (await this.loadUserFavorites(user_id)).keys()  
+        // eslint-disable-next-line no-undef
+        const photo_ids = (await this.loadUserFavorites(user_id, {idb: new ImageDatabase()})).keys()  
         await this.processPhotos(photo_ids)
     }
 
