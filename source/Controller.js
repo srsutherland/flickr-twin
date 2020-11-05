@@ -24,7 +24,7 @@ class Controller {
             this._processed_images.add(photo_id);
             //Load the first page of faves for each image, get total number of pages
             progress.await(this.api.getImageFavorites(photo_id).then((response) => {
-                const pages = response.photo.pages;
+                const pages = response.pages;
                 console.log("%s: %s pages", photo_id, pages) //TODO remove debugging info
                 progress.updatePages(pages)
                 // Load each subpage
@@ -49,20 +49,20 @@ class Controller {
     async processUsers(user_ids) {
         const progress = new Progress(user_ids.length);
         for (const user_id of user_ids) {
-            progress.await(this.loadUser(user_id, {progress: progress}))
+            progress.await(this.loadUserFavorites(user_id, {progress: progress}))
         }
         // Wait for all the api call promises to settle
         await progress.allSettled();
         progress.done();
     }
 
-    async loadUser(user_id, opts = {}) {
+    async loadUserFavorites(user_id, opts = {}) {
         const progress = opts.progress || new Progress(1)
         const idb = opts.idb || this.idb
         // Load the first page of faves for each user, get the total number of pages
         await this.api.getUserFavorites(user_id).then((response) => {
-            const pages = Math.min(response.photos.pages, opts.max_pages || 50);
-            if (response.photos.pages > 50) {
+            const pages = Math.min(response.pages, opts.max_pages || 50);
+            if (response.pages > 50) {
                 console.warn(`user ${user_id} has more than 50 pages of favorites`)
             }
             progress.updatePages(pages);
@@ -86,7 +86,7 @@ class Controller {
 
     async processPhotosFromUser(user_id) {
         // Done in one step to allow idb to be garbage collected immediately
-        const photo_ids = (await this.loadUser(user_id)).keys()  
+        const photo_ids = (await this.loadUserFavorites(user_id)).keys()  
         await this.processPhotos(photo_ids)
     }
 

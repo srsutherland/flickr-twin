@@ -79,21 +79,39 @@ class FlickrAPI {
     }
 
     /**
+     * Fetches and returns the json object from a Flickr API endpoint 
+     * @param {string} rest_url - constructed url of the rest api endpoint
+     * @returns {Object} - Parsed version of the json response 
+     */
+    async fetchJSON(rest_url) {
+        const rest_response = await fetch(rest_url);
+        const response_json = await rest_response.json();
+        // Parse JSON object from the http response; should, in all cases, have key "stat" with either:
+        // response.stat == "ok" : success; data should be in other top-level key
+        // response.stat == "fail" : failure; details under response.message and error code under response.code 
+        const stat = response_json.stat
+        if (stat != "ok") {
+            throw new Error(response_json.message || "No error message received")
+        }
+        return response_json;
+    }
+
+    /**
      * https://www.flickr.com/services/api/flickr.photos.getFavorites.html
      * Returns a json object with a list of people who have favorited a given photo.
      * See doc/api-examples/flickr.photos.getFavorites.json for an example.
      * @param {string} photo_id - The ID of the photo to fetch the favoriters list for.
      * @param {number} page - The page of results to return. If this argument is omitted, it defaults to 1.
-     * @returns {Object} - Parsed version of the json response
+     * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getImageFavorites(photo_id, page = 1) {
         this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
         const method = "&method=flickr.photos.getFavorites&per_page=50";
         const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${this.api_key}`;
-        const rest_response = await fetch(rest_url);
-        const response_json = await rest_response.json(); //extract JSON from the http response
-        return response_json;
+        const response_json = await this.fetchJSON(rest_url)
+        const data = response_json.photo // Unwrap the response code from the main data array
+        return data;
     }
 
     /**
@@ -102,16 +120,16 @@ class FlickrAPI {
      * See doc/api-examples/flickr.favorites.getPublicList.json for an example.
      * @param {string} user_id - The user to fetch the favorites list for.
      * @param {number} page - The page of results to return. If this argument is omitted, it defaults to 1.
-     * @returns {Object} - Parsed version of the json response
+     * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getUserFavorites(user_id, page = 1) {
         this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
         const method = "&method=flickr.favorites.getPublicList&per_page=500";
         const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${this.api_key}`;
-        const rest_response = await fetch(rest_url);
-        const response_json = await rest_response.json(); //extract JSON from the http response
-        return response_json;
+        const response_json = await this.fetchJSON(rest_url)
+        const data = response_json.photos // Unwrap the response code from the main data array
+        return data;
     }
 
     /**
@@ -119,16 +137,16 @@ class FlickrAPI {
      * Returns a json object with information about a photo.
      * See doc/api-examples/flickr.photos.getInfo.json for an example.
      * @param {string} photo_id - The id of the photo to get information for.
-     * @returns {Object} - Parsed version of the json response
+     * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getPhotoInfo(photo_id) {
         this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
         const method = "&method=flickr.photos.getInfo";
         const rest_url = `${baseurl}${method}&photo_id=${photo_id}&api_key=${this.api_key}`;
-        const rest_response = await fetch(rest_url);
-        const response_json = await rest_response.json(); //extract JSON from the http response
-        return response_json;
+        const response_json = await this.fetchJSON(rest_url)
+        const data = response_json.photo // Unwrap the response code from the main data array
+        return data;
     }
 }
 
@@ -254,6 +272,17 @@ class FavesDatabase {
     }
 
     /**
+     * Clear the faves for all items, leaving photo/user data (for rendering purposes)
+     */
+    clearFaves() {
+        for (const item of this.values()) {
+            if (item.faves) item.faves = {};
+            if (item.faved_by) item.faved_by = [];
+            item.favecount = 0;
+        }
+    }
+
+    /**
      * Copy db to localstorage (may be too large)
      */
     store() {
@@ -279,9 +308,10 @@ class UserDatabase extends FavesDatabase {
     addPerson(person) {
         this.set(person.nsid, {
             nsid: person.nsid,
+            name: person.name || person.realname || person.username,
             realname: person.realname,
             username: person.username,
-            buddyicon: person.iconserver > 0 ?
+            buddyicon: person.buddyicon || person.iconserver > 0 ?
                 `http://farm${person.iconfarm}.staticflickr.com/${person.iconserver}/buddyicons/${person.nsid}.jpg` :
                 "https://www.flickr.com/images/buddyicon.gif",
             faves: {},
@@ -290,12 +320,9 @@ class UserDatabase extends FavesDatabase {
     }
 
     add(json_response) {
-        if (json_response.stat !== "ok") {
-            console.log(json_response.stat);
-            return;
-        }
-        const people = json_response.photo.person;
-        const photo_id = json_response.photo.id;
+        //flickr.photos.getFavorites
+        const people = json_response.person;
+        const photo_id = json_response.id;
         for (const person of people) {
             const nsid = person.nsid;
             if (!this.has(nsid)) {
@@ -333,15 +360,11 @@ class ImageDatabase extends FavesDatabase {
     }
 
     add(json_response, opts={}) {
-        if (json_response.stat !== "ok") {
-            console.log(json_response.stat);
-            return;
-        }
         //flickr.photos.getInfo
-        if (json_response.photo && !this.has(json_response.photo.id)) {
-            this.addPhoto(json_response.photo);
+        if (json_response.id && !this.has(json_response.id)) {
+            this.addPhoto(json_response);
         } else { //flickr.favorites.getPublicList
-            const photos = json_response.photos.photo;
+            const photos = json_response.photo;
             for (const photo of photos) {
                 const id = photo.id;
                 if (!this.has(id)) {
@@ -541,10 +564,36 @@ class Renderer {
         return this;
     }
 
+    /**
+     * Takes a list of image ids and displays them all on a single page.
+     * @param {Array} id_list 
+     */
     displayImagesByIDs(id_list) {
         const image_list = id_list.map(id => this.idb.get(id)).filter(img => img != null);
         this.displaying = { images: image_list }
         this.clear().renderImages(image_list);
+    }
+
+    userHTML(user) {
+        return `
+        <li class="person">
+            <a href="//:www.flickr.com/photos/${user.nsid}/favorites/">
+                <span class="person-icon">
+                    <span class="circle-icon">
+                        <img src="${user.buddyicon}" width="30"
+                            height="30">
+                    </span>
+                    <span class="person-name">
+                        <span class="person-displayname">${user.name}</span>
+                        <span class="person-username">${user.username}</span>
+                    </span>
+                    <span class="person-favecount">
+                        (${user.favecount})
+                    </span>
+                </span>
+            </a>
+        </li>
+        `
     }
 
     /**
@@ -776,7 +825,7 @@ class Controller {
             this._processed_images.add(photo_id);
             //Load the first page of faves for each image, get total number of pages
             progress.await(this.api.getImageFavorites(photo_id).then((response) => {
-                const pages = response.photo.pages;
+                const pages = response.pages;
                 console.log("%s: %s pages", photo_id, pages) //TODO remove debugging info
                 progress.updatePages(pages)
                 // Load each subpage
@@ -801,20 +850,20 @@ class Controller {
     async processUsers(user_ids) {
         const progress = new Progress(user_ids.length);
         for (const user_id of user_ids) {
-            progress.await(this.loadUser(user_id, {progress: progress}))
+            progress.await(this.loadUserFavorites(user_id, {progress: progress}))
         }
         // Wait for all the api call promises to settle
         await progress.allSettled();
         progress.done();
     }
 
-    async loadUser(user_id, opts = {}) {
+    async loadUserFavorites(user_id, opts = {}) {
         const progress = opts.progress || new Progress(1)
         const idb = opts.idb || this.idb
         // Load the first page of faves for each user, get the total number of pages
         await this.api.getUserFavorites(user_id).then((response) => {
-            const pages = Math.min(response.photos.pages, opts.max_pages || 50);
-            if (response.photos.pages > 50) {
+            const pages = Math.min(response.pages, opts.max_pages || 50);
+            if (response.pages > 50) {
                 console.warn(`user ${user_id} has more than 50 pages of favorites`)
             }
             progress.updatePages(pages);
@@ -838,7 +887,7 @@ class Controller {
 
     async processPhotosFromUser(user_id) {
         // Done in one step to allow idb to be garbage collected immediately
-        const photo_ids = (await this.loadUser(user_id)).keys()  
+        const photo_ids = (await this.loadUserFavorites(user_id)).keys()  
         await this.processPhotos(photo_ids)
     }
 
@@ -859,8 +908,8 @@ class Controller {
                 progress.await(this.api.getPhotoInfo(photo_id).then(response => {
                     this.idb.add(response)
                     progress.update()
-                }).catch(() => {
-                    progress.error(photo_id)
+                }).catch(error => {
+                    progress.error(photo_id, error)
                 }))
             } else {
                 progress.duplicate()

@@ -123,7 +123,7 @@ class FavesDatabase {
      * Clear the faves for all items, leaving photo/user data (for rendering purposes)
      */
     clearFaves() {
-        for (const item of this.db) {
+        for (const item of this.values()) {
             if (item.faves) item.faves = {};
             if (item.faved_by) item.faved_by = [];
             item.favecount = 0;
@@ -168,12 +168,9 @@ class UserDatabase extends FavesDatabase {
     }
 
     add(json_response) {
-        if (json_response.stat !== "ok") {
-            console.log(json_response.stat);
-            return;
-        }
-        const people = json_response.photo.person;
-        const photo_id = json_response.photo.id;
+        //flickr.photos.getFavorites
+        const people = json_response.person;
+        const photo_id = json_response.id;
         for (const person of people) {
             const nsid = person.nsid;
             if (!this.has(nsid)) {
@@ -211,15 +208,11 @@ class ImageDatabase extends FavesDatabase {
     }
 
     add(json_response, opts={}) {
-        if (json_response.stat !== "ok") {
-            console.log(json_response.stat);
-            return;
-        }
         //flickr.photos.getInfo
-        if (json_response.photo && !this.has(json_response.photo.id)) {
-            this.addPhoto(json_response.photo);
+        if (json_response.id && !this.has(json_response.id)) {
+            this.addPhoto(json_response);
         } else { //flickr.favorites.getPublicList
-            const photos = json_response.photos.photo;
+            const photos = json_response.photo;
             for (const photo of photos) {
                 const id = photo.id;
                 if (!this.has(id)) {
