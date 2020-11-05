@@ -107,8 +107,8 @@ class Controller {
                 progress.await(this.api.getPhotoInfo(photo_id).then(response => {
                     this.idb.add(response)
                     progress.update()
-                }).catch(() => {
-                    progress.error(photo_id)
+                }).catch(error => {
+                    progress.error(photo_id, error)
                 }))
             } else {
                 progress.duplicate()

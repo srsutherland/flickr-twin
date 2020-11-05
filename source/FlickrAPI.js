@@ -76,6 +76,19 @@ class FlickrAPI {
     }
 
     /**
+     * 
+     * @param {Object} response - interpreted response json; should, in all cases, have a "stat" with either:
+     *      response.stat == "ok" : success; data should be in other top-level key
+     *      response.stat == "fail" : failure; details under response.message and error code under response.code 
+     */
+    checkResponse(response) {
+        const stat = response.stat
+        if (stat != "ok") {
+            throw new Error(`${stat}: ${response.message}`)
+        }
+    }
+
+    /**
      * https://www.flickr.com/services/api/flickr.photos.getFavorites.html
      * Returns a json object with a list of people who have favorited a given photo.
      * See doc/api-examples/flickr.photos.getFavorites.json for an example.
@@ -89,7 +102,8 @@ class FlickrAPI {
         const method = "&method=flickr.photos.getFavorites&per_page=50";
         const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${this.api_key}`;
         const rest_response = await fetch(rest_url);
-        const response_json = await rest_response.json(); //extract JSON from the http response
+        const response_json = await rest_response.json(); // extract JSON from the http response
+        this.checkResponse(response_json); // check for error codes
         return response_json;
     }
 
@@ -107,7 +121,8 @@ class FlickrAPI {
         const method = "&method=flickr.favorites.getPublicList&per_page=500";
         const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${this.api_key}`;
         const rest_response = await fetch(rest_url);
-        const response_json = await rest_response.json(); //extract JSON from the http response
+        const response_json = await rest_response.json(); // extract JSON from the http response
+        this.checkResponse(response_json); // check for error codes
         return response_json;
     }
 
@@ -124,7 +139,8 @@ class FlickrAPI {
         const method = "&method=flickr.photos.getInfo";
         const rest_url = `${baseurl}${method}&photo_id=${photo_id}&api_key=${this.api_key}`;
         const rest_response = await fetch(rest_url);
-        const response_json = await rest_response.json(); //extract JSON from the http response
+        const response_json = await rest_response.json(); // extract JSON from the http response
+        this.checkResponse(response_json); // check for error codes
         return response_json;
     }
 }
