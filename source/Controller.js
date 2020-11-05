@@ -90,8 +90,8 @@ class Controller {
         await this.processPhotos(photo_ids)
     }
 
-    async processUsersFromDB(num = 20) {
-        const users = this.udb.sortedList(num).map(user => user.nsid)
+    async processUsersFromDB(num = 20, starting_from = 0) {
+        const users = this.udb.sortedList(num, starting_from).map(user => user.nsid)
         await this.processUsers(users);
     }
 
