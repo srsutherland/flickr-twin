@@ -1,0 +1,18 @@
+body {
+    color: white;
+    background-color: #111;
+}
+
+#log {
+    font-family: monospace;
+}
+
+.img-container {
+    margin: 5px;
+    background: rgba(84, 91, 94, .5);
+}
+
+.flex {
+    display: flex;
+    flex-wrap: wrap;
+}
