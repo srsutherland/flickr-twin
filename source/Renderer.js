@@ -117,33 +117,12 @@ export class Renderer {
         opts.max_page = max;
         const images_onscreen = images.slice(per_page * (cur - 1), per_page * cur);
         // Render
-        this.addImageCSS()
-        this.addPaginationCSS()
         this.clear()
         this.renderPagination(cur, max)
         this.renderImages(images_onscreen)
         this.renderPagination(cur, max)
         // Set state
         this.displaying = { ...opts, f: this.displayImages, images: images, images_onscreen: images_onscreen }
-    }
-
-    /**
-     * Add CSS to the document for styling the image view
-     */
-    addImageCSS() {
-        if (document.getElementById("flickr-twin-img-css") == undefined) {
-            document.head.innerHTML +=
-                `<style id="flickr-twin-img-css">
-                    .img-container {
-                        margin: 5px;
-                        background: rgba(84,91,94,.5);
-                    }
-                    .flex {
-                        display: flex;
-                        flex-wrap: wrap;
-                    }
-                </style>`;
-        }
     }
 
     /**
@@ -171,7 +150,6 @@ export class Renderer {
      * @returns {Renderer} - A reference to this Renderer
      */
     renderImages(image_list) {
-        this.addImageCSS();
         let newHTML = `<div class="flex">`;
         for (const img of image_list) {
             newHTML += this.imageHTML(img);
@@ -330,87 +308,5 @@ export class Renderer {
         this.appendHTML(this.paginationHTML(cur, max));
         this.addPaginationListeners()
         return this;
-    }
-
-    /**
-     * Add CSS to the document for styling the pagination buttons
-     */
-    addPaginationCSS() {
-        if (document.getElementById("flickr-twin-page-css") == undefined) {
-            document.head.innerHTML +=
-                `<style id="flickr-twin-page-css">
-                    .pagination-view {
-                        margin: 10px auto;
-                        text-align: center;
-                        min-height: 20px;
-                    }
-                    
-                    .pagination-view a {
-                        text-decoration-color: initial;
-                    }
-                    
-                    .pagination-view a {
-                        text-decoration: none;
-                        display: inline-block;
-                        border-radius: 3px;
-                    }
-                    
-                    .pagination-view span {
-                        color: rgb(157, 149, 136);
-                    }
-                    
-                    .pagination-view span {
-                        display: inline-block;
-                        box-sizing: border-box;
-                        min-width: 32px;
-                        height: 32px;
-                        padding: 0 10px;
-                        line-height: 32px;
-                        color: #898989;
-                        text-align: center;
-                        border-radius: 3px;
-                        cursor: pointer;
-                        vertical-align: top;
-                        transition: background-color .15s ease-in-out;
-                    }
-                    
-                    .pagination-view span.is-current {
-                        background-image: initial;
-                        background-color: rgb(0, 113, 178);
-                        color: rgb(232, 230, 227);
-                    }
-                    
-                    .pagination-view span.is-current {
-                        background: #008ddf;
-                        color: #fff;
-                        font-weight: 600;
-                    }
-                    
-                    .pagination-view a:hover span {
-                        box-shadow: rgb(0, 113, 178) 0px 0px 0px 2px inset;
-                    }
-                    
-                    .pagination-view i {
-                        display: inline-block;
-                        position: relative;
-                        top: 3px;
-                    }
-                    
-                    .pagination-view .page-arrow {
-                        background: url(https://combo.staticflickr.com/ap/build/images/sprites/icons-cc4be245.png) -542px -334px no-repeat;
-                        width: 8px;
-                        height: 18px;
-                    }
-                    
-                    .pagination-view .page-arrow.right {
-                        -webkit-transform: rotate(180deg);
-                        transform: rotate(180deg);
-                    }
-
-                    .pagination-view .disabled .page-arrow {
-                        display: none;
-                    }
-                </style>`;
-        }
     }
 }
