@@ -1,5 +1,5 @@
 <head>
-    <script src="./flickr-twin.js"></script>
+    <script type="module" src="./source/main.js"></script>
     <link href="./source/css/styles.css" rel="stylesheet">
     <link href="./source/css/pagination.css" rel="stylesheet">
 </head>
@@ -7,24 +7,15 @@
 <body>
     <div id="main"></div>
     <div id="control">
+        <label>User ID:</label>
         <input type="text" id="user-id-input" placeholder="e.g. 8675309@N06"></input>
         <button id="process-user-faves">Process User Favorites</button>
         <button id="show-most-popular">Show most popular images</button>
     </div>
     <div id="log">this should be log content</div>
-    <script async defer>
-        document.addEventListener("DOMContentLoaded", () => {
-            c.r.renderParent = document.getElementById("main")
-            let apiInfo = document.getElementById("log")
-            let logTimer = setInterval(() => { apiInfo.textContent = c.api.toString() }, 1000)
-            document.getElementById("process-user-faves").addEventListener('click', async () => {
-                await c.processPhotosFromUser(document.getElementById("user-id-input").value)
-                c.r.print_results()
-            })
-            document.getElementById("show-most-popular").addEventListener('click', async () => {
-                await c.processUsersFromDB()
-                c.r.displayImages()
-            })
-        })
-    </script>
+    <div id="api-key">
+        <label>API Key:</label>
+        <input type="text" id="api-key-input">
+        <button id="set-api-key">set</button>
+    </div>
 </body>
