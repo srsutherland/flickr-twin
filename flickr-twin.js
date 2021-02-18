@@ -84,6 +84,7 @@ class FlickrAPI {
      * @returns {Object} - Parsed version of the json response 
      */
     async fetchJSON(rest_url) {
+        this.useAPI();
         const rest_response = await fetch(rest_url);
         const response_json = await rest_response.json();
         // Parse JSON object from the http response; should, in all cases, have key "stat" with either:
@@ -105,7 +106,6 @@ class FlickrAPI {
      * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getImageFavorites(photo_id, page = 1) {
-        this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
         const method = "&method=flickr.photos.getFavorites&per_page=50";
         const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${this.api_key}`;
@@ -123,7 +123,6 @@ class FlickrAPI {
      * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getUserFavorites(user_id, page = 1) {
-        this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
         const method = "&method=flickr.favorites.getPublicList&per_page=500";
         const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${this.api_key}`;
@@ -140,7 +139,6 @@ class FlickrAPI {
      * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getPhotoInfo(photo_id) {
-        this.useAPI();
         const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
         const method = "&method=flickr.photos.getInfo";
         const rest_url = `${baseurl}${method}&photo_id=${photo_id}&api_key=${this.api_key}`;
@@ -891,8 +889,8 @@ class Controller {
         await this.processPhotos(photo_ids)
     }
 
-    async processUsersFromDB(num = 20) {
-        const users = this.udb.sortedList(num).map(user => user.nsid)
+    async processUsersFromDB(num = 20, starting_from = 0) {
+        const users = this.udb.sortedList(num, starting_from).map(user => user.nsid)
         await this.processUsers(users);
     }
 
