@@ -1,9 +1,9 @@
-'use strict';
+import { UserDatabase, ImageDatabase } from "./FavesDatabase.js";
+import { FlickrAPI } from "./FlickrAPI.js"
+import { Renderer } from "./Renderer.js"
 
-// eslint-disable-next-line no-unused-vars
-class Controller {
+export class Controller {
     constructor() {
-        /* eslint-disable no-undef */
         this.api = new FlickrAPI();
         this.udb = new UserDatabase();
         this.idb = new ImageDatabase();
@@ -11,7 +11,6 @@ class Controller {
         this._excluded = new Set();
         this._hidden = new Set();
         this.r = new Renderer(this);
-        /* eslint-enable no-undef */
     }
 
     async processPhotos(photo_ids) {
@@ -86,7 +85,6 @@ class Controller {
 
     async processPhotosFromUser(user_id) {
         // Done in one step to allow idb to be garbage collected immediately
-        // eslint-disable-next-line no-undef
         const photo_ids = (await this.loadUserFavorites(user_id, {idb: new ImageDatabase()})).keys()  
         await this.processPhotos(photo_ids)
     }
@@ -156,7 +154,7 @@ class Controller {
     }
 }
 
-class Progress {
+export class Progress {
     constructor(total_inputs) {
         this.number_of_inputs = total_inputs;
         this.total_inputs = total_inputs;
@@ -253,3 +251,5 @@ class Progress {
         console.log(msg + ".");
     }
 }
+
+export default Controller

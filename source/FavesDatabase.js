@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Base class for UserDatabase and ImageDatabase
  */
@@ -145,8 +143,7 @@ class FavesDatabase {
     }
 }
 
-// eslint-disable-next-line no-unused-vars
-class UserDatabase extends FavesDatabase {
+export class UserDatabase extends FavesDatabase {
     constructor() {
         super();
         this.storageKey = "udb";
@@ -185,8 +182,7 @@ class UserDatabase extends FavesDatabase {
     }
 }
 
-// eslint-disable-next-line no-unused-vars
-class ImageDatabase extends FavesDatabase {
+export class ImageDatabase extends FavesDatabase {
     constructor() {
         super();
         this.storageKey = "idb";

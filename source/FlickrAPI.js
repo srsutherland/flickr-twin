@@ -1,7 +1,4 @@
-'use strict';
-
-// eslint-disable-next-line no-unused-vars
-class FlickrAPI {
+export class FlickrAPI {
     /**
      * Create the api wrapper
      * @param {string} api_key - (optional) If omitted, attempts to read saved value from localstorage 

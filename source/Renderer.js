@@ -1,7 +1,4 @@
-'use strict';
-
-// eslint-disable-next-line no-unused-vars
-class Renderer {
+export class Renderer {
     constructor(controller) {
         this.c = controller;
         this.idb = controller.idb;
