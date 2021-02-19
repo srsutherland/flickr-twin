@@ -179,7 +179,7 @@ export class Renderer {
     }
 
     renderUsers(user_list)  {
-        let newHTML = `<div class="flex">`;
+        let newHTML = `<div class="flex centered">`;
         for (const user of user_list) {
             newHTML += this.userHTML(user);
         }
