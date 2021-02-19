@@ -16,3 +16,53 @@ body {
     display: flex;
     flex-wrap: wrap;
 }
+
+.centered {
+    max-width: 70em;
+    margin: 1em auto;
+}
+
+/* User plaques */
+
+li.person {
+    display: inline-block;
+    margin: 7px;
+}
+
+.person-icon {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background-color: #1d1d1d;
+    border-radius: 5px;
+    padding: 7px;
+}
+
+.person-icon:hover {
+    background-color: #252525;
+}
+
+.person a {
+    text-decoration: none;
+    color: rgb(84, 192, 255);
+
+}
+
+.circle-icon img {
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+}
+
+.person-name {
+    display: inline-block;
+}
+
+.person-displayname {
+    display: block;
+}
+
+.person-username {
+    display: block;
+    color: #777
+}

@@ -168,14 +168,32 @@ export class Renderer {
         this.clear().renderImages(image_list);
     }
 
+    /**
+     * Display the top matching flicker twins
+     * @param {number} max_count - Number of users to print
+     */
+    displayTwins(max_count = 30) {
+        let twins_list = this.udb.sortedList(max_count);
+        this.clear()
+        this.renderUsers(twins_list)
+    }
+
+    renderUsers(user_list)  {
+        let newHTML = `<div class="flex">`;
+        for (const user of user_list) {
+            newHTML += this.userHTML(user);
+        }
+        this.appendHTML(newHTML + `</div>`);
+        return this;
+    }
+
     userHTML(user) {
         return `
         <li class="person">
-            <a href="//:www.flickr.com/photos/${user.nsid}/favorites/">
+            <a href="https//:www.flickr.com/photos/${user.nsid}/favorites/">
                 <span class="person-icon">
                     <span class="circle-icon">
-                        <img src="${user.buddyicon}" width="30"
-                            height="30">
+                        <img src="${user.buddyicon}">
                     </span>
                     <span class="person-name">
                         <span class="person-displayname">${user.name}</span>

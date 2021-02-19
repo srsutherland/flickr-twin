@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("process-user-faves").addEventListener('click', async () => {
         let uid = document.getElementById("user-id-input").value
         await c.processPhotosFromUser(uid)
-        c.r.print_results()
+        c.r.displayTwins()
     })
 
     document.getElementById("show-most-popular").addEventListener('click', async () => {
