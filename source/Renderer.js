@@ -176,6 +176,7 @@ export class Renderer {
         let twins_list = this.udb.sortedList(max_count);
         this.clear()
         this.renderUsers(twins_list)
+        this.displaying = { f: this.displayTwins, users: twins_list }
     }
 
     renderUsers(user_list)  {
@@ -326,5 +327,39 @@ export class Renderer {
         this.appendHTML(this.paginationHTML(cur, max));
         this.addPaginationListeners()
         return this;
+    }
+
+    displayProgress(percentage, message) {
+        let progressbar_div
+        let message_div
+        
+        if (!this.displaying || this.displaying.f != this.displayProgress) {
+            this.clear()
+            this.appendHTML(`
+            <div class="flex centered">
+                <div id="loading">
+                    <div id="progressbar">
+                        <div id="progress" style="width: 0%"></div>
+                    </div>
+                    <div id="message"></div>
+                </div>  
+            </div>
+            `);
+            progressbar_div = document.getElementById("progress")
+            message_div = document.getElementById("message")
+        } else {
+            progressbar_div = this.displaying.progressbar_div
+            message_div = this.displaying.message_div
+        }
+
+        progressbar_div.style.width = percentage + "%"
+        if (message) {
+            message_div.textContent = message
+        }
+
+        this.displaying = { 
+            f: this.displayProgress, percentage: percentage, message: message, 
+            progressbar_div: progressbar_div, message_div: message_div 
+        }
     }
 }

@@ -14,7 +14,7 @@ export class Controller {
     }
 
     async processPhotos(photo_ids) {
-        const progress = new Progress(photo_ids.length);
+        const progress = new Progress(photo_ids.length).renderWith(this.r);
         for (const photo_id of photo_ids) {
             if (this._processed_images.has(photo_id)) {
                 progress.duplicate(photo_id);
@@ -46,7 +46,7 @@ export class Controller {
     }
 
     async processUsers(user_ids) {
-        const progress = new Progress(user_ids.length);
+        const progress = new Progress(user_ids.length).renderWith(this.r);
         for (const user_id of user_ids) {
             progress.await(this.loadUserFavorites(user_id, {progress: progress}))
         }
@@ -85,7 +85,7 @@ export class Controller {
 
     async processPhotosFromUser(user_id) {
         // Done in one step to allow idb to be garbage collected immediately
-        const photo_ids = (await this.loadUserFavorites(user_id, {idb: new ImageDatabase()})).keys()  
+        const photo_ids = (await this.loadUserFavorites(user_id, {idb: new ImageDatabase()} )).keys()  
         await this.processPhotos(photo_ids)
     }
 
@@ -167,15 +167,26 @@ export class Progress {
         this.awaitedSub = [];
     }
 
+    renderWith(renderer_object) {
+        this.renderer = renderer_object;
+        return this;
+    }
+
     toString() {
-        return `${this.inputs_processed}/${this.total_inputs} : ${this.pages_processed}/${this.total_pages}`
+        return `${this.inputs_processed}/${this.total_inputs} : ${this.pages_processed}/${this.total_pages}`;
     }
 
     log(msg) {
-        if (msg) {
-            console.log("%s (%s)", this.toString(), msg);
-        } else {
-            console.log(this.toString());
+        if (this.renderer instanceof Renderer) {
+            let percentage = 100 * this.pages_processed / this.total_pages;
+            this.renderer.displayProgress(percentage, this.toString());
+        }
+        if (!this.renderer || window.verbose_mode) {
+            if (msg) {
+                console.log("%s (%s)", this.toString(), msg);
+            } else {
+                console.log(this.toString());
+            }
         }
     }
 
@@ -244,7 +255,7 @@ export class Progress {
      * Log that the task has been completed
      */
     done() {
-        let msg = `Done. Processed ${this.inputs_processed}/${this.number_of_inputs} items`
+        let msg = `Done. Processed ${this.inputs_processed}/${this.number_of_inputs} items over ${this.pages_processed} requests`
         if (this.duplicates) {
             msg += ` with ${this.duplicates} duplicates`
         }

@@ -66,3 +66,29 @@ li.person {
     display: block;
     color: #777
 }
+
+/* Loading Bar */
+
+#loading {
+    width: 90%;
+    margin: auto;
+}
+
+#progressbar {
+    background-color: black;
+    border: 2px solid #777;
+    border-radius: 1.5em;
+    padding: 3px;
+}
+  
+#progressbar>#progress {
+    background-color: #3f9;
+    width: 0%;
+    height: 1.5em;
+    border-radius: 1.5em;
+}
+  
+#loading #message {
+    font-family: monospace;
+    text-align: center;
+}
