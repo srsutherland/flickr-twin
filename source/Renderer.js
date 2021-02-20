@@ -190,7 +190,7 @@ export class Renderer {
     userHTML(user) {
         return `
         <li class="person">
-            <a href="https//:www.flickr.com/photos/${user.nsid}/favorites/">
+            <a href="https://www.flickr.com/photos/${user.nsid}/favorites/">
                 <span class="person-icon">
                     <span class="circle-icon">
                         <img src="${user.buddyicon}">
