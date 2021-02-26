@@ -136,12 +136,14 @@ export class Renderer {
      * @returns {string} - A string of the html to display the given object
      */
     imageHTML(img) {
-        return `<a href="${img.url}" target="_blank">
-                <div class="img-container">
-                    <div><img src="${img.imgUrl}"></div>
-                    <div>${img.favecount ? img.favecount + " faves" : ""}</div>
-                </div>
-                </a>`;
+        return `<div>
+                    <a href="${img.url}" target="_blank" class="img-link">
+                        <div class="img-container">
+                            <div><img src="${img.imgUrl}"></div>
+                            <div>${img.favecount ? img.favecount + " faves" : ""}</div>
+                        </div>
+                    </a>
+                </div>`;
     }
 
     /**
