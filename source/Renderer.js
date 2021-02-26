@@ -138,7 +138,7 @@ export class Renderer {
     imageHTML(img) {
         return `<div>
                     <a href="${img.url}" target="_blank" class="img-link">
-                        <div class="img-container">
+                        <div class="img-container" data-id="${img.id}">
                             <div><img src="${img.imgUrl}"></div>
                             <div>${img.favecount ? img.favecount + " faves" : ""}</div>
                         </div>
