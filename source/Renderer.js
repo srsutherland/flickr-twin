@@ -31,7 +31,7 @@ export class Renderer {
      * @returns {Renderer} A reference to the calling object
      */
     appendHTML(newHTML) {
-        this.renderParent.innerHTML += newHTML;
+        this.renderParent.insertAdjacentHTML("beforeend", newHTML);
         return this;
     }
 
