@@ -102,8 +102,8 @@ export class Renderer {
                 opts.mode = "all"
             } else {
                 images = this.idb.sortedListExcluding(this.c.getHidden())
-                const minfavecount = images[0].favecount / 5
-                if (images[0].favecount > 2) {
+                const minfavecount = images[0]?.favecount / 5
+                if (images[0]?.favecount > 2) {
                     images = images.filter(i => i.favecount > minfavecount);
                 }
                 opts.mode = "default"
