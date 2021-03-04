@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      0.2
+// @version      0.3
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -21,14 +21,17 @@
             this.categories = GM_SuperValue.get("categories", [])
             this.subcategories = GM_SuperValue.get("subcategories", [])
             this.lists = {};
-            for (const cat of this.categories) {
-                this.lists[cat] = GM_SuperValue.get(cat, [])
-            }
             let logText = ""
             for (const cat of this.categories) {
+                this.updateList(cat)
                 logText += `${cat} (${this.lists[cat].length}), `
             }
             console.log(logText)
+        }
+
+        updateList(category) {
+            this.lists[category] = GM_SuperValue.get(category, [])
+            return this.lists[category];
         }
 
         export() {
@@ -47,15 +50,33 @@
         }
 
         addItem(category, id) {
-            const ls = GM_SuperValue.get(category, [])
-            this.lists[category] = ls
+            assertIsString(category)
+            assertIsString(id)
+            const ls = this.updateList(category)
             if (!ls.includes(id)) {
-                ls.push(id)
+                const len = ls.push(id)
                 GM_SuperValue.set(category, ls)
+                return len
+            } else {
+                return -1;
             }
         }
 
+        removeItem(category, id) {
+            assertIsString(category)
+            assertIsString(id)
+            const ls = this.updateList(category)
+            const ndx = ls.indexOf(id)
+            if (ndx !== -1) {
+                const newList = ls.filter(i => i !== id)
+                GM_SuperValue.set(category, newList)
+            }
+            return ndx;
+        }
+
         addSourceUrl(id, url) {
+            assertIsString(id)
+            assertIsString(url)
             const sourceURLs = GM_SuperValue.get("sourceURL", {})
             if (sourceURLs[id] == undefined) {
                 sourceURLs[id] = url
@@ -67,14 +88,24 @@
 
         lookup(id, json) {
             const rvalue = []
+            const log = (msg) => { if (!json) { console.log(msg) } }
             for (const cat of this.categories) {
                 const ndx = this.lists[cat].indexOf(id)
                 if (ndx !== -1) {
                     rvalue.push({category: cat, ndx: ndx})
-                    if (!json) {
-                        console.log(`"${id}" in "${cat}" at position${ndx}`)
-                    }
+                    log(`"${id}" in "${cat}" at position ${ndx} of ${this.lists[cat].length}`)
                 }
+            }
+            const sourceURL = GM_SuperValue.get("sourceURL", {})[id]
+            if (sourceURL) {
+                rvalue.push({sourceURL: sourceURL})
+                log(`Original URL: "${sourceURL}"`)
+            }
+            if (rvalue.length === 0) {
+                log(`"${id}" not found`)
+            }
+            if (json) {
+                return rvalue;
             }
         }
     }
@@ -177,6 +208,7 @@
             this.photoID = window.location.href.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)[1]
             this.checkIf404()
             this.createControlPanel()
+            this.lookup(this.photoID)
         }
 
         createControlPanel() {
@@ -186,25 +218,43 @@
                 const underPhoto = document.querySelector(".sub-photo-container.centered-content")
                 underPhoto.insertAdjacentElement("afterbegin", this.cp)
                 for (const cat of this.categories) {
-                    const selected = this.lists[cat].includes(this.id) ? "ffl-cat-selected" : "";
+                    const selected = this.lists[cat].includes(this.photoID) ? "ffl-cat-selected" : "";
                     this.cp.insertAdjacentHTML("beforeend", ` <button class="ffl-cat-button ${selected}" id="${cat}-button">${cat}</button>`)
                     const catButton = document.getElementById(`${cat}-button`)
                     catButton.addEventListener('click', () => {
-                        this.addItem(cat, this.id)
-
+                        const isSelected = "ffl-cat-selected"
+                        if (!catButton.classList.contains(isSelected)) {
+                            this.addItem(cat, this.photoID)
+                            this.addSourceUrl(this.photoID, this.url)
+                            catButton.classList.add(isSelected)
+                            console.log(`Added "${this.photoID}" to "${cat}"`)
+                        } else {
+                            const ndx = this.removeItem(cat, this.photoID)
+                            console.log(`Removed "${this.photoID}" from pos ${ndx} of "${cat}"`)
+                            catButton.classList.remove(isSelected)
+                        }
                     })
                 }
+                document.head.insertAdjacentHTML("beforeend",
+                `<style>
+                .ffl-cat-selected {
+                    filter: hue-rotate(150deg);
+                }
+                #ffl_control_panel .ffl-cat-button {
+                    padding: 0 5px;
+                }
+                </style>`)
             } catch (e) {
                 console.error(e)
-            }   
+            }
         }
 
         checkIf404() {
             urlExists(this.url).then( ok => {
                 if (!ok) {
-                    this.addItem("e404", this.id)
-                    this.addSourceUrl(this.id, this.url)
-                    iqwerty.toast.toast(`Added "${this.id}" to 404 ignore list`)
+                    this.addItem("e404", this.photoID)
+                    this.addSourceUrl(this.photoID, this.url)
+                    iqwerty.toast.toast(`Added "${this.photoID}" to 404 ignore list`)
                 }
             })
         }
@@ -228,23 +278,13 @@
         return response.ok
     }
 
-    if (window.location.href.match("srsutherland.github.io/flickr-twin/")) {
-        if (unsafeWindow.c) {
-            //controllerLoaded();
-          } else {
-            Object.defineProperty(unsafeWindow, 'c', {
-              configurable: true,
-              enumerable: true,
-              get: function() {
-                return this._c;
-              },
-              set: function(val) {
-                this._c = val;
-                //controllerLoaded();
-              }
-            });
-          }
+    function assertIsString(arg, name="arg") {
+        if (typeof arg !== "string") {
+            throw new TypeError(`${name} must be a string`)
+        }
     }
+
+    /*** Main ***/
 
     let ffl
     if (window.location.href.match("srsutherland.github.io/flickr-twin/")) {
