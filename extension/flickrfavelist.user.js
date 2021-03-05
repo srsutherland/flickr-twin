@@ -8,6 +8,7 @@
 // @match        https://www.flickr.com/*
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_listValues
 // @require      http://userscripts-mirror.org/scripts/source/107941.user.js
 // @require      https://greasyfork.org/scripts/408787-js-toast/code/js-toast.js?version=837479
 // ==/UserScript==
@@ -15,7 +16,7 @@
 (function() {
     'use strict';
     // eslint-disable-next-line no-redeclare
-    /* global GM_SuperValue, unsafeWindow, iqwerty */
+    /* global GM_SuperValue, GM_listValues, unsafeWindow, iqwerty */
     class FlickrFaveList {
         constructor() {
             this.categories = GM_SuperValue.get("categories", [])
@@ -46,6 +47,14 @@
         import(settings_obj) {
             for (const [k,v] of Object.entries(settings_obj)) {
                 GM_SuperValue.set(k, v)
+            }
+        }
+
+        retrieve(GM_key) {
+            if (GM_key != undefined) {
+                return GM_SuperValue.get(GM_key, undefined)
+            } else {
+                return GM_listValues()
             }
         }
 
@@ -116,7 +125,7 @@
 
             this.awaitController().then(() => {
                 this.hideAll()
-                this.syncPhotoInfo()
+                this.pushPhotoInfo()
             })
         }
 
@@ -135,7 +144,7 @@
 
         async printLists(categories = this.categories) {
             await this.awaitController()
-            await this.syncPhotoInfo()
+            await this.pushPhotoInfo()
             this.c.r.clear()
             const main = unsafeWindow.c.r.renderParent
             for (const [i,cat] of categories.entries()) {
@@ -161,13 +170,24 @@
             console.log("All lists hidden")
         }
 
-        async syncPhotoInfo() {
+        async pushPhotoInfo() {
             await this.awaitController()
             const db = GM_SuperValue.get("db", [])
             for (const photo of db) {
                 this.c.idb.addPhoto(photo)
             }
             iqwerty.toast.toast('Photo info synced from extension')
+        }
+
+        async pullPhotoInfo() {
+            await this.awaitController()
+            await this.pushPhotoInfo()
+            const newdb = [].concat(...Object.values(ffl.lists))
+                .map(i => this.c.idb.get(i))
+                .filter(i => i)
+                .map(p => {return {id:p.id, owner:p.owner, secret:p.secret, server:p.server}})
+            GM_SuperValue.set("db", newdb)
+            iqwerty.toast.toast('Photo info synced to extension')
         }
 
         async sortingMode(categories) {
