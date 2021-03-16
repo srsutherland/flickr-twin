@@ -182,7 +182,7 @@
         async pullPhotoInfo() {
             await this.awaitController()
             await this.pushPhotoInfo()
-            const newdb = [].concat(...Object.values(ffl.lists))
+            const newdb = [].concat(...Object.values(this.lists))
                 .map(i => this.c.idb.get(i))
                 .filter(i => i)
                 .map(p => {return {id:p.id, owner:p.owner, secret:p.secret, server:p.server}})
