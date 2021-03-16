@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("user-id-input").value = window.localStorage.uid;
     }
 
-    document.getElementById("process-user-faves").addEventListener('click', async () => {
+    document.getElementById("find-user-twins").addEventListener('click', async () => {
         let uid = document.getElementById("user-id-input").value;
         window.localStorage.uid = uid;
         await c.processPhotosFromUser(uid);
