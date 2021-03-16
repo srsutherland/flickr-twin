@@ -10,10 +10,16 @@
 <body>
     <div id="main"></div>
     <div id="control">
-        <label>User ID:</label>
-        <input type="text" id="user-id-input" placeholder="e.g. 8675309@N06"></input>
-        <button id="process-user-faves">Process User Favorites</button>
-        <button id="show-most-popular">Show most popular images</button>
+        <div id="control-main">
+            <label>User ID:</label>
+            <input type="text" id="user-id-input" placeholder="e.g. 8675309@N06"></input>
+            <button id="process-user-faves">Find User Twins</button>
+            <button id="show-most-popular">Show most popular images</button>
+        </div>
+        <div id="control-advanced" class="not-collapsed">
+            <div id="control-advanced-toggle"><a>Advanced: +</a></div>
+            <div id="control-advanced-fold" class="collapsable"></div>
+        </div>
     </div>
     <div id="log">this should be log content</div>
     <div id="api-key">
