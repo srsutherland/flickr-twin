@@ -7,29 +7,51 @@ c.api.log()
 document.addEventListener("DOMContentLoaded", () => {
     c.r.renderParent = document.getElementById("main");
 
-    let apiInfo = document.getElementById("log");
+    const apiInfo = document.getElementById("api-log");
     globalThis.logTimer = setInterval(() => { apiInfo.textContent = c.api.toString() }, 1000);
     apiInfo.textContent = c.api.toString();
     if (window.localStorage.uid) {
         document.getElementById("user-id-input").value = window.localStorage.uid;
     }
+    
+    function connectButton(id, func) {
+        document.getElementById(id).addEventListener('click', func)
+    }
 
-    document.getElementById("find-user-twins").addEventListener('click', async () => {
-        let uid = document.getElementById("user-id-input").value;
+    function readUID() {
+        const uid = document.getElementById("user-id-input").value;
         window.localStorage.uid = uid;
-        await c.processPhotosFromUser(uid);
+        return uid;
+    }
+
+    /* Main Control */
+
+    connectButton("find-user-twins", async () => {
+        await c.processPhotosFromUser(readUID());
         c.r.displayTwins();
     })
 
-    document.getElementById("show-most-popular").addEventListener('click', async () => {
+    connectButton("show-most-popular", async () => {
         await c.processUsersFromDB();
         c.r.displayImages();
     })
 
-    document.getElementById("set-api-key").addEventListener('click', () => {
-        let key = document.getElementById("api-key-input").value;
+    connectButton("set-api-key", () => {
+        const key = document.getElementById("api-key-input").value;
         c.api.setAPIKey(key);
     })
+
+    /* Advanced */
+
+    connectButton("display-user-faves", async () => {
+        //TODO: this only works properly as the first operation.
+        const udb = await c.loadUserFavorites(readUID())
+        await c.r.displayImagesByIDs(udb.keys()) 
+    })
+    connectButton("process-user-faves", () => { c.processPhotosFromUser(readUID()) })
+    connectButton("display-twins",      () => { c.r.displayTwins() })
+    connectButton("process-twins",      () => { c.processUsersFromDB() })
+    connectButton("display-images",     () => { c.r.displayImages() })
 })
 
 

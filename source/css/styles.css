@@ -47,9 +47,13 @@ select:-webkit-autofill {
     margin: 1em auto;
 }
 
+section {
+    padding: 1em;
+}
+
 /* Container Formatting */
 
-#log {
+#log, #api-log {
     font-family: monospace;
 }
 

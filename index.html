@@ -8,8 +8,8 @@
 </head>
 
 <body>
-    <div id="main"></div>
-    <div id="control">
+    <section id="main"></section>
+    <section id="control">
         <div id="control-main">
             <label>User ID:</label>
             <input type="text" id="user-id-input" placeholder="e.g. 8675309@N06"></input>
@@ -18,13 +18,19 @@
         </div>
         <div id="control-advanced" class="not-collapsed">
             <div id="control-advanced-toggle"><a>Advanced: +</a></div>
-            <div id="control-advanced-fold" class="collapsable"></div>
+            <div id="control-advanced-fold" class="collapsable">
+                <button id="display-user-faves">Display user faves</button>
+                <button id="process-user-faves">Process user faves</button>
+                <button id="display-twins">Display twins</button>
+                <button id="process-twins">Process twins</button>
+                <button id="display-images">Display images</button>
+            </div>
         </div>
-    </div>
-    <div id="log">this should be log content</div>
-    <div id="api-key">
+    </section>
+    <section id="api-key">
         <label>API Key:</label>
         <input type="text" id="api-key-input">
         <button id="set-api-key">set</button>
-    </div>
+        <div id="api-log">this should be log content</div>
+    </section>
 </body>
