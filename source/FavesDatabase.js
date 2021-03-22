@@ -18,10 +18,12 @@ class FavesDatabase {
     /**
      * Get an object from db
      * @param {string} id 
+     * @param {object} defaultValue - the value to return if id is not found. Undefined if not specified
      * @returns {object}
      */
-    get(id) {
-        return this.db[id];
+    get(id, defaultValue = undefined) {
+        const value = this.db[id]; 
+        return value !== undefined ? value : defaultValue;
     }
 
     /**
@@ -151,17 +153,19 @@ export class UserDatabase extends FavesDatabase {
     }
 
     addPerson(person) {
-        this.set(person.nsid, {
-            nsid: person.nsid,
-            name: person.name || person.realname || person.username,
-            realname: person.realname,
-            username: person.username,
-            buddyicon: person.buddyicon || person.iconserver > 0 ?
-                `http://farm${person.iconfarm}.staticflickr.com/${person.iconserver}/buddyicons/${person.nsid}.jpg` :
-                "https://www.flickr.com/images/buddyicon.gif",
-            faves: {},
-            favecount: 0,
-        });
+        if (!this.has(person)) {
+            this.set(person.nsid, {
+                nsid: person.nsid,
+                name: person.name || person.realname || person.username,
+                realname: person.realname,
+                username: person.username,
+                buddyicon: person.buddyicon || person.iconserver > 0 ?
+                    `http://farm${person.iconfarm}.staticflickr.com/${person.iconserver}/buddyicons/${person.nsid}.jpg` :
+                    "https://www.flickr.com/images/buddyicon.gif",
+                faves: {},
+                favecount: 0,
+            });
+        }
     }
 
     add(json_response) {
@@ -170,9 +174,7 @@ export class UserDatabase extends FavesDatabase {
         const photo_id = json_response.id;
         for (const person of people) {
             const nsid = person.nsid;
-            if (!this.has(nsid)) {
-                this.addPerson(person);
-            }
+            this.addPerson(person);
             if (this.get(nsid).faves[photo_id]) {
                 continue;
             }
@@ -190,17 +192,23 @@ export class ImageDatabase extends FavesDatabase {
     }
 
     addPhoto(photo) {
-        const owner = typeof photo.owner == "string" ? photo.owner : photo.owner.nsid;
-        this.set(photo.id, {
-            id: photo.id,
-            owner: owner,
-            secret: photo.secret,
-            server: photo.server,
-            url: `https://www.flickr.com/photos/${owner}/${photo.id}/`,
-            imgUrl: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`,
-            faved_by: [],
-            favecount: 0,
-        });
+        if (!this.has(photo.id)) {
+            const owner = typeof photo.owner == "string" ? photo.owner : photo.owner.nsid;
+            const newPhoto = {
+                id: photo.id,
+                owner: owner,
+                secret: photo.secret,
+                server: photo.server,
+                url: `https://www.flickr.com/photos/${owner}/${photo.id}/`,
+                imgUrl: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_m.jpg`,
+                faved_by: [],
+                favecount: 0,
+            }
+            this.set(photo.id, newPhoto);
+            return newPhoto;
+        } else {
+            return this.get(photo.id)
+        }
     }
 
     add(json_response, opts={}) {
@@ -211,12 +219,14 @@ export class ImageDatabase extends FavesDatabase {
             const photos = json_response.photo;
             for (const photo of photos) {
                 const id = photo.id;
-                if (!this.has(id)) {
-                    this.addPhoto(photo);
-                }
-                this.get(id).favecount += 1;
-                if (opts.user_id) {
-                    this.get(id).faved_by.push(opts.user_id)
+                const record = this.addPhoto(photo);
+                if (!opts.nofavecount) {
+                    record.favecount += 1;
+                    if (opts.user_id && record.faved_by.includes(opts.user_id)) {
+                        record.faved_by.push(opts.user_id)
+                    } else {
+                        this.get(id).favecount -= 1;
+                    }
                 }
             }
         }
