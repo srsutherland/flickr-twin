@@ -43,6 +43,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* Advanced */
 
+    for (const b of document.querySelectorAll(".collapse-button")) {
+        b.addEventListener("click", () => {
+            const p = b.parentElement;
+            if (p.classList.contains("collapsed")) {
+                p.classList.remove("collapsed")
+            } else {
+                p.classList.add("collapsed")
+            }
+        })
+    }
+
     connectButton("display-user-faves", async () => {
         //TODO: this only works properly as the first operation.
         const udb = await c.loadUserFavorites(readUID())
