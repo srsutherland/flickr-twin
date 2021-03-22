@@ -54,15 +54,9 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     }
 
-    connectButton("display-user-faves", async () => {
-        //TODO: this only works properly as the first operation.
-        const udb = await c.loadUserFavorites(readUID())
-        await c.r.displayImagesByIDs(udb.keys()) 
-    })
+    connectButton("display-user-faves", async () => { c.r.displayImagesByIDs(await c.loadUserFavorites(readUID())) })
     connectButton("process-user-faves", () => { c.processPhotosFromUser(readUID()) })
     connectButton("display-twins",      () => { c.r.displayTwins() })
     connectButton("process-twins",      () => { c.processUsersFromDB() })
     connectButton("display-images",     () => { c.r.displayImages() })
 })
-
-

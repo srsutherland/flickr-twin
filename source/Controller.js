@@ -57,7 +57,9 @@ export class Controller {
 
     async loadUserFavorites(user_id, opts = {}) {
         const progress = opts.progress || new Progress(1)
-        const idb = opts.idb || this.idb
+        const id_list = [];
+        // If "discard" opt is set, change idb to a dummy object that discards the response
+        const idb = opts.discard ? {add: () => null} : this.idb;
         // Load the first page of faves for each user, get the total number of pages
         await this.api.getUserFavorites(user_id).then((response) => {
             const pages = Math.min(response.pages, opts.max_pages || 50);
@@ -68,10 +70,12 @@ export class Controller {
             // Load each subpage
             for (let i = 2; i <= pages; i++) {
                 progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
+                    id_list.push(...response.photo.map(photo=>photo.id))
                     idb.add(response, { user_id: user_id });
                     progress.subUpdate()
                 }))
             }
+            id_list.push(...response.photo.map(photo=>photo.id))
             idb.add(response, { user_id: user_id });
             progress.update();
         }).catch(error => {
@@ -80,12 +84,11 @@ export class Controller {
         if (!opts.progress) {
             progress.done()
         }
-        return idb;
+        return id_list;
     }
 
     async processPhotosFromUser(user_id) {
-        // Done in one step to allow idb to be garbage collected immediately
-        const photo_ids = (await this.loadUserFavorites(user_id, {idb: new ImageDatabase()} )).keys()  
+        const photo_ids = await this.loadUserFavorites(user_id, {discard: true})
         await this.processPhotos(photo_ids)
     }
 
