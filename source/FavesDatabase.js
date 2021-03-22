@@ -222,7 +222,7 @@ export class ImageDatabase extends FavesDatabase {
                 const record = this.addPhoto(photo);
                 if (!opts.nofavecount) {
                     record.favecount += 1;
-                    if (opts.user_id && record.faved_by.includes(opts.user_id)) {
+                    if (opts.user_id && !record.faved_by.includes(opts.user_id)) {
                         record.faved_by.push(opts.user_id)
                     } else {
                         this.get(id).favecount -= 1;
