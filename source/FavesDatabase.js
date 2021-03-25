@@ -153,7 +153,7 @@ export class UserDatabase extends FavesDatabase {
     }
 
     addPerson(person) {
-        if (!this.has(person)) {
+        if (!this.has(person.nsid)) {
             this.set(person.nsid, {
                 nsid: person.nsid,
                 name: person.name || person.realname || person.username,
