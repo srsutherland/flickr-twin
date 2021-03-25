@@ -7,12 +7,7 @@ export class FlickrAPI {
         if (api_key) {
             this.setAPIKey(api_key);
         } else if (window.localStorage["api_key"]) {
-            this.api_key = window.localStorage["api_key"];
-        }
-        if (window.localStorage["call_history"]) {
-            this.call_history = JSON.parse(window.localStorage["call_history"]);
-        } else {
-            this.call_history = [];
+            this.setAPIKey(window.localStorage["api_key"]);
         }
     }
 
@@ -43,6 +38,12 @@ export class FlickrAPI {
     setAPIKey(api_key) {
         this.api_key = api_key;
         window.localStorage["api_key"] = api_key;
+        if (window.localStorage[api_key]) {
+            this.call_history = JSON.parse(window.localStorage[this.api_key]);
+        } else {
+            this.call_history = [];
+            window.localStorage[this.api_key] = "[]"
+        }
     }
 
     /**
@@ -65,11 +66,12 @@ export class FlickrAPI {
         if (!(this.api_key && this.api_key.length > 5)) {
             throw new Error("No API key set");
         }
+        this.call_history = JSON.parse(window.localStorage[this.api_key])
         if (this.getNumberOfAPICalls() > 3500) {
             throw new Error("Exceeded API limit for this key");
         }
         this.call_history.push(Date.now());
-        window.localStorage["call_history"] = JSON.stringify(this.call_history);
+        window.localStorage[this.api_key] = JSON.stringify(this.call_history);
     }
 
     /**
