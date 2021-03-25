@@ -14,6 +14,9 @@ export class Controller {
     }
 
     async processPhotos(photo_ids) {
+        if (typeof photo_ids === "string") {
+            photo_ids = [photo_ids]
+        }
         const progress = new Progress(photo_ids.length).renderWith(this.r);
         for (const photo_id of photo_ids) {
             if (this._processed_images.has(photo_id)) {
@@ -46,6 +49,9 @@ export class Controller {
     }
 
     async processUsers(user_ids) {
+        if (typeof user_ids === "string") {
+            user_ids = [user_ids]
+        }
         const progress = new Progress(user_ids.length).renderWith(this.r);
         for (const user_id of user_ids) {
             progress.await(this.loadUserFavorites(user_id, {progress: progress}))
@@ -103,6 +109,9 @@ export class Controller {
      * @param {Array} photo_ids - List of photo ids to load
      */
     async loadPhotos(photo_ids) {
+        if (typeof photo_ids === "string") {
+            photo_ids = [photo_ids]
+        }
         const progress = new Progress(photo_ids.length)
         for (const photo_id of photo_ids) {
             if (!this.idb.has(photo_id)) {
@@ -125,6 +134,9 @@ export class Controller {
      * @param {Iterable} list - List of ids to exclude
      */
     exclude(list) {
+        if (typeof list === "string") {
+            list = [list]
+        }
         for (const i of list) {
             this._excluded.add(i);
         }
@@ -135,6 +147,9 @@ export class Controller {
      * @param {Iterable} list - List of ids to hide
      */
     hide(list) {
+        if (typeof list === "string") {
+            list = [list]
+        }
         for (const i of list) {
             this._hidden.add(i);
         }
