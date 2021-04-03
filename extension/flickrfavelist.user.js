@@ -228,7 +228,8 @@
             this.photoID = window.location.href.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)[1]
             this.checkIf404()
             this.createControlPanel()
-            this.lookup(this.photoID)
+            this.lookup(this.photoID) //Prints stored url to console
+            this.addPhotoStreamLinkIfAbsent()
         }
 
         createControlPanel() {
@@ -266,6 +267,16 @@
                 </style>`)
             } catch (e) {
                 console.error(e)
+            }
+        }
+
+        addPhotoStreamLinkIfAbsent() {
+            const userID = window.location.href.match(/flickr\.com\/photos\/([\w-]+|\d+@N\d\d)\/\d+[/$]/i)[1]
+            const psURL = `/photos/${userID}/with/${this.photoID}/`
+            const backlink = document.querySelector(".entry-type.do-not-evict")
+            if (backlink && !backlink.href.match(psURL)) {
+                const newLink = `<a class="entry-type do-not-evict no-outline" style="top: 38px" href="${psURL}"><div class="icon"></div> Back to photostream</a>`
+                backlink.insertAdjacentHTML("afterend", newLink)
             }
         }
 
