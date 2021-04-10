@@ -230,6 +230,8 @@
             this.createControlPanel()
             this.lookup(this.photoID) //Prints stored url to console
             this.addPhotoStreamLinkIfAbsent()
+            //the link gets removed from the page after a while for some reason. Bodge to fix that.
+            this.pslinkinterval = setInterval(() => { if (document.hasFocus()) this.addPhotoStreamLinkIfAbsent() }, 1000);
         }
 
         createControlPanel() {
@@ -273,10 +275,10 @@
         addPhotoStreamLinkIfAbsent() {
             const userID = window.location.href.match(/flickr\.com\/photos\/([\w-]+|\d+@N\d\d)\/\d+[/$]/i)[1]
             const psURL = `/photos/${userID}/with/${this.photoID}/`
-            const backlink = document.querySelector(".entry-type.do-not-evict")
-            if (backlink && !backlink.href.match(psURL)) {
+            const backlinks = [...document.querySelectorAll(".entry-type.do-not-evict")]
+            if (backlinks[0] && backlinks.every(e => !e.href.match(psURL))) {
                 const newLink = `<a class="entry-type do-not-evict no-outline" style="top: 38px" href="${psURL}"><div class="icon"></div> Back to photostream</a>`
-                backlink.insertAdjacentHTML("afterend", newLink)
+                backlinks[0].insertAdjacentHTML("afterend", newLink)
             }
         }
 
