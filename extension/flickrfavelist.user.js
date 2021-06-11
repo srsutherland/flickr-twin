@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      0.4
+// @version      2021.06.10
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -92,6 +92,15 @@ const fflExtensionVersion = "2021.06.10a";
             return ndx;
         }
 
+        removeNulls() {
+            for (const category of this.categories) {
+                const ls = this.updateList(category)
+                const newList = ls.filter(i => i !== null)
+                GM_SuperValue.set(category, newList)
+                this.lists[category] = newList;
+            }
+        }
+
         addSourceUrl(id, url) {
             assertIsString(id)
             assertIsString(url)
@@ -136,6 +145,7 @@ const fflExtensionVersion = "2021.06.10a";
                 this.hideAll()
                 this.pushPhotoInfo()
             })
+            this.createAdvancedPanel()
         }
 
         async awaitController() {
@@ -177,6 +187,67 @@ const fflExtensionVersion = "2021.06.10a";
                 .map(p => {return {id:p.id, owner:p.owner, secret:p.secret, server:p.server}})
             GM_SuperValue.set("db", newdb)
             iqwerty.toast.toast('Photo info synced to extension')
+        }
+
+        createAdvancedPanel() {
+            if (document.getElementById("control-advanced-dynamic") == null) {
+                const fold = document.getElementById("control-advanced-fold")
+                fold.insertAdjacentHTML("beforeend", `<div id="control-advanced-dynamic"></div>`)
+            }
+            const ap = document.getElementById("control-advanced-dynamic");
+            ap.insertAdjacentHTML("beforeend", `<form id="ffl-lists"></form>`)
+            const checkboxForm = document.getElementById("ffl-lists");
+
+            for (let [cat, list] of Object.entries(this.lists)){
+                let label = `${cat} (${list.length})`
+                let newHTML = `<label class="ffl-list-check"><input type="checkbox" id="ffl-lists-${cat}" name="ffl-lists" value="${cat}"><span>${label}</span></label> `
+                checkboxForm.insertAdjacentHTML("beforeend", newHTML)
+            }
+
+            const getChecked = () => {return [...checkboxForm.getElementsByTagName("input")].filter(e => e.checked).map(e => e.value)}
+            const allCheckedItems = () => [].concat(...(getChecked().map(cat => this.lists[cat])))
+
+            ap.insertAdjacentHTML("beforeend", 
+            `<div>
+                <button id="ffl-display-lists">Display lists</button>
+                <button id="ffl-paginate-lists">Paginate lists</button>
+                <button id="ffl-process-lists">Process lists</button>
+            </div>`)
+            document.getElementById("ffl-display-lists").addEventListener('click', () => { this.printLists(getChecked()) })
+            document.getElementById("ffl-paginate-lists").addEventListener('click', () => { this.c.r.displayImages({ids:allCheckedItems()}) })
+            document.getElementById("ffl-process-lists").addEventListener('click', () => { this.c.processPhotos(allCheckedItems()) })
+
+            document.head.insertAdjacentHTML("beforeend", 
+            `<style>
+            #ffl-lists {
+                margin: 5px 0;
+            }
+
+            .ffl-list-check {
+                background-color: rgb(14, 114, 176);
+                color: rgb(232, 230, 227);
+                display: inline-block;
+                padding: 5px;
+                font-family: sans-serif;
+                border-radius: 3px;
+                cursor: pointer;
+                margin: 2px
+            }
+
+            .ffl-cat-selected {
+                filter: hue-rotate(150deg);
+            }
+
+            .ffl-list-check :checked {
+                filter: hue-rotate(150deg);
+            }
+            
+            .ffl-list-check :checked + span {
+                color: #faa;
+                font-weight: bold;
+                text-shadow: 1px 1px 3px black;
+            }
+            </style>`)
         }
 
         async printLists(categories = this.categories) {
