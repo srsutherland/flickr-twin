@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      0.3
+// @version      0.4
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -13,8 +13,17 @@
 // @require      https://greasyfork.org/scripts/408787-js-toast/code/js-toast.js?version=837479
 // ==/UserScript==
 
+const fflExtensionVersion = "2021.06.10a";
+
 (function() {
     'use strict';
+    if (window.fflLoaded) {
+        console.warn(`Aborted loading extension version ${fflExtensionVersion}; different version already loaded`);
+        return; // Detect multiple versions and abort if already loaded.
+    } else {
+        window.fflLoaded = true;
+    }
+    
     // eslint-disable-next-line no-redeclare
     /* global GM_SuperValue, GM_listValues, unsafeWindow, iqwerty */
     class FlickrFaveList {
@@ -142,26 +151,6 @@
             }
         }
 
-        async printLists(categories = this.categories) {
-            await this.awaitController()
-            await this.pushPhotoInfo()
-            this.c.r.clear()
-            const main = unsafeWindow.c.r.renderParent
-            for (const [i,cat] of categories.entries()) {
-                if (this.lists[cat] instanceof Array) {
-                    let ls = this.lists[cat]
-                    console.log(`${cat} (${ls.length})`)
-                    let hue = i * 360/categories.length
-                    main.insertAdjacentHTML("beforeend", `<h2>${cat}</h2><div id=${cat}-div style="border-left: 3px solid hsl(${hue},100%,50%)"></div>`)
-                    this.c.r.renderParent = document.getElementById(cat+"-div")
-                    this.c.r.displayImagesByIDs(ls)
-                } else {
-                    console.log(`${cat} not found, not displayed`)
-                }
-            }
-            unsafeWindow.c.r.renderParent = main
-        }
-
         async hideAll() {
             await this.awaitController()
             for (const list of Object.values(this.lists)) {
@@ -188,6 +177,26 @@
                 .map(p => {return {id:p.id, owner:p.owner, secret:p.secret, server:p.server}})
             GM_SuperValue.set("db", newdb)
             iqwerty.toast.toast('Photo info synced to extension')
+        }
+
+        async printLists(categories = this.categories) {
+            await this.awaitController()
+            await this.pushPhotoInfo()
+            this.c.r.clear()
+            const main = unsafeWindow.c.r.renderParent
+            for (const [i,cat] of categories.entries()) {
+                if (this.lists[cat] instanceof Array) {
+                    let ls = this.lists[cat]
+                    console.log(`${cat} (${ls.length})`)
+                    let hue = i * 360/categories.length
+                    main.insertAdjacentHTML("beforeend", `<h2>${cat}</h2><div id=${cat}-div style="border-left: 3px solid hsl(${hue},100%,50%)"></div>`)
+                    this.c.r.renderParent = document.getElementById(cat+"-div")
+                    this.c.r.displayImagesByIDs(ls)
+                } else {
+                    console.log(`${cat} not found, not displayed`)
+                }
+            }
+            unsafeWindow.c.r.renderParent = main
         }
 
         async sortingMode(categories) {
