@@ -136,6 +136,9 @@ export class Renderer {
      * @returns {string} - A string of the html to display the given object
      */
     imageHTML(img) {
+        if (img == null) {
+            return `<div><a class="img-link"><div class="img-container"><div><img src="media/icon-missing.png"></div></div></a></div>`
+        }
         return `<div>
                     <a href="${img.url}" target="_blank" class="img-link">
                         <div class="img-container" data-id="${img.id}">
@@ -191,6 +194,13 @@ export class Renderer {
     }
 
     userHTML(user) {
+        if (user == null) {
+            return `
+            <li class="person"><a><span class="person-icon">
+                <span class="circle-icon"><img src="media/icon-missing.png"></span>
+                <span class="person-name"><span class="person-displayname">NULL</span></span></span>
+            </span></a></li>`
+        }
         return `
         <li class="person">
             <a href="https://www.flickr.com/photos/${user.nsid}/favorites/">
