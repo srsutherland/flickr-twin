@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.06.10
+// @version      2021.06.16
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -11,9 +11,9 @@
 // @grant        GM_listValues
 // @require      http://userscripts-mirror.org/scripts/source/107941.user.js
 // @require      https://greasyfork.org/scripts/408787-js-toast/code/js-toast.js?version=837479
-// ==/UserScript==
+// ==/UserScript==6
 
-const fflExtensionVersion = "2021.06.10a";
+const fflExtensionVersion = "2021.06.16a";
 
 (function() {
     'use strict';
@@ -339,14 +339,15 @@ const fflExtensionVersion = "2021.06.10a";
                     })
                 }
                 document.head.insertAdjacentHTML("beforeend",
-                `<style>
-                .ffl-cat-selected {
-                    filter: hue-rotate(150deg);
-                }
-                #ffl_control_panel .ffl-cat-button {
-                    padding: 0 5px;
-                }
-                </style>`)
+                    `<style>
+                    .ffl-cat-selected {
+                        filter: hue-rotate(150deg);
+                    }
+                    #ffl_control_panel .ffl-cat-button {
+                        padding: 0 5px;
+                    }
+                    </style>`
+                )
             } catch (e) {
                 console.error(e)
             }
@@ -372,7 +373,57 @@ const fflExtensionVersion = "2021.06.10a";
             })
         }
     }
-    
+
+    class FlickrFaveListPhotoList extends FlickrFaveList {
+        constructor() {
+            super()
+            this.url = window.location.href
+            this.addCSS()
+            this.addCatPills()
+        }
+
+        getPhotoIDFromURL(url) {
+            return url.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)[1]
+        }
+
+        addCatPills () {
+            for (const elem of document.querySelectorAll(".photo-list-photo-view a.overlay")) {
+                for (const c of ffl.lookup(this.getPhotoIDFromURL(elem.href),1)) {
+                    if (c.category) {
+                        elem.parentElement.parentElement.parentElement.insertAdjacentHTML("beforeend", 
+                            `<div class="ffl-catpill"><span class="ffl-catpillname">${c.category}</span></div>`
+                        )
+                    }
+                }
+            }
+        }
+
+        addCSS() {
+            document.head.insertAdjacentHTML("beforeend",
+                `<style>
+                .ffl-catpill {
+                    background: red;
+                    border: 3px solid blue;
+                    color: white;
+                    display: inline-flex;
+                    box-sizing: border-box;
+                    padding: 1px .4em;
+                    margin: 5px;
+                    border-radius: 5em;
+                    min-height: 1.5em;
+                    min-width: 1.5em;
+                }
+                .photo-list-photo-view:hover .ffl-catpillname {
+                    display: inline;
+                }
+                .ffl-catpillname {
+                    display: none;
+                }
+                </style>`
+            )
+        }
+    }
+
     /***  Helper Functions ***/
 
     function downloadObjectAsJson(exportObj, exportName) {
@@ -404,6 +455,10 @@ const fflExtensionVersion = "2021.06.10a";
         ffl = new FlickrFaveListTwin()
     } else if (window.location.href.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)) {
         ffl = new FlickrFaveListPhotoPage()
+    } else if (window.location.href.match(/flickr\.com\/photos\/[^/]+\/($|page\d+|with)/)) {
+        ffl = new FlickrFaveListPhotoList()
+    } else if (window.location.href.match(/flickr\.com\/photos\/[^/]+\/favorites\/($|page\d+|with)/)) {
+        ffl = new FlickrFaveListPhotoList()
     } else {
         ffl = new FlickrFaveList()
     }
