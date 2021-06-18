@@ -198,7 +198,7 @@ export class Renderer {
             return `
             <li class="person"><a><span class="person-icon">
                 <span class="circle-icon"><img src="media/icon-missing.png"></span>
-                <span class="person-name"><span class="person-displayname">NULL</span></span></span>
+                <span class="person-name"><span class="person-displayname">NULL</span></span>
             </span></a></li>`
         }
         return `
