@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.06.16
+// @version      2021.06.17
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -13,25 +13,24 @@
 // @require      https://greasyfork.org/scripts/408787-js-toast/code/js-toast.js?version=837479
 // ==/UserScript==6
 
-const fflExtensionVersion = "2021.06.16a";
-
 (function() {
     'use strict';
+    // eslint-disable-next-line no-redeclare
+    /* global GM_SuperValue, GM_listValues, GM_info, unsafeWindow, iqwerty */
     if (window.fflLoaded) {
-        console.warn(`Aborted loading extension version ${fflExtensionVersion}; different version already loaded`);
+        console.warn(`Aborted loading extension version ${GM_info.script.version}; version ${window.fflLoaded} already loaded`);
         return; // Detect multiple versions and abort if already loaded.
     } else {
-        window.fflLoaded = true;
+        window.fflLoaded = GM_info.script.version;
+        console.log(`Loaded ${GM_info.script.name} version ${GM_info.script.version}`)
     }
-    
-    // eslint-disable-next-line no-redeclare
-    /* global GM_SuperValue, GM_listValues, unsafeWindow, iqwerty */
+
     class FlickrFaveList {
         constructor() {
             this.categories = GM_SuperValue.get("categories", [])
             this.subcategories = GM_SuperValue.get("subcategories", [])
             this.lists = {};
-            let logText = ""
+            let logText = this.constructor.name + ": "
             for (const cat of this.categories) {
                 this.updateList(cat)
                 logText += `${cat} (${this.lists[cat].length}), `
@@ -379,23 +378,52 @@ const fflExtensionVersion = "2021.06.16a";
             super()
             this.url = window.location.href
             this.addCSS()
-            this.addCatPills()
+            this.catPillsEvent = {
+                adding: false,
+                queued: false
+            }
+            document.addEventListener('scroll', () => {
+                this.queueCatPills()
+            })
+            window.setTimeout( () => { this.addCatPills() }, 1000)
         }
 
         getPhotoIDFromURL(url) {
             return url.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)[1]
         }
 
+        queueCatPills() {
+            if (!this.catPillsEvent.adding) {
+                this.addCatPills()
+            } else if (!this.catPillsEvent.queued) {
+                this.catPillsEvent.queued = true;
+                window.setTimeout( () => {
+                    this.addCatPills();
+                    this.catPillsEvent.queued = false;
+                }, 250)
+            }
+        }
+
         addCatPills () {
+            this.catPillsEvent.adding = true
             for (const elem of document.querySelectorAll(".photo-list-photo-view a.overlay")) {
+                const parent = elem.parentElement.parentElement.parentElement;
+                if (parent.querySelector(".ffl-catpill-contain")) {
+                    continue;
+                }
+                const catpill_container = document.createElement("div")
+                catpill_container.classList.add("ffl-catpill-contain")
+                parent.insertAdjacentElement("beforeend", catpill_container)
                 for (const c of ffl.lookup(this.getPhotoIDFromURL(elem.href),1)) {
                     if (c.category) {
-                        elem.parentElement.parentElement.parentElement.insertAdjacentHTML("beforeend", 
-                            `<div class="ffl-catpill"><span class="ffl-catpillname">${c.category}</span></div>`
+                        catpill_container.insertAdjacentHTML("beforeend", 
+                            `<div class="ffl-catpill ffl-catpill-${c.category}"><span class="ffl-catpillname">${c.category}</span></div>`
                         )
+                        parent.classList.add(`ffl-cat-${c.category}`)
                     }
                 }
             }
+            this.catPillsEvent.adding = false;
         }
 
         addCSS() {
@@ -418,6 +446,12 @@ const fflExtensionVersion = "2021.06.16a";
                 }
                 .ffl-catpillname {
                     display: none;
+                }
+                .ffl-cat-exclude, .ffl-cat-hide {
+                    opacity: 30%;
+                }
+                .ffl-cat-exclude:hover, .ffl-cat-hide:hover {
+                    opacity: 100%;
                 }
                 </style>`
             )
@@ -453,11 +487,11 @@ const fflExtensionVersion = "2021.06.16a";
     let ffl
     if (window.location.href.match("srsutherland.github.io/flickr-twin/")) {
         ffl = new FlickrFaveListTwin()
-    } else if (window.location.href.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)) {
+    } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/)) {
         ffl = new FlickrFaveListPhotoPage()
-    } else if (window.location.href.match(/flickr\.com\/photos\/[^/]+\/($|page\d+|with)/)) {
+    } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/)) {
         ffl = new FlickrFaveListPhotoList()
-    } else if (window.location.href.match(/flickr\.com\/photos\/[^/]+\/favorites\/($|page\d+|with)/)) {
+    } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/)) {
         ffl = new FlickrFaveListPhotoList()
     } else {
         ffl = new FlickrFaveList()
