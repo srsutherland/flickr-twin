@@ -38,6 +38,10 @@
             console.log(logText)
         }
 
+        destroy() {
+            // clean up intervals in child classes if neccescary; otherwise, do nothing.
+        }
+
         updateList(category) {
             this.lists[category] = GM_SuperValue.get(category, [])
             return this.lists[category];
@@ -313,6 +317,10 @@
             this.pslinkinterval = setInterval(() => { if (document.hasFocus()) this.addPhotoStreamLinkIfAbsent() }, 1000);
         }
 
+        destroy() {
+            clearInterval(this.pslinkinterval)
+        }
+
         createControlPanel() {
             try {
                 this.cp = document.createElement("div")
@@ -382,10 +390,15 @@
                 adding: false,
                 queued: false
             }
-            document.addEventListener('scroll', () => {
+            this.scrollListener = document.addEventListener('scroll', () => {
                 this.queueCatPills()
             })
             window.setTimeout( () => { this.addCatPills() }, 1000)
+        }
+
+        destroy() {
+            clearTimeout(this.catPillsEvent.timeout)
+            document.removeEventListener('scroll', this.scrollListener)
         }
 
         getPhotoIDFromURL(url) {
@@ -397,7 +410,7 @@
                 this.addCatPills()
             } else if (!this.catPillsEvent.queued) {
                 this.catPillsEvent.queued = true;
-                window.setTimeout( () => {
+                this.catPillsEvent.timeout = setTimeout( () => {
                     this.addCatPills();
                     this.catPillsEvent.queued = false;
                 }, 250)
@@ -414,7 +427,7 @@
                 const catpill_container = document.createElement("div")
                 catpill_container.classList.add("ffl-catpill-contain")
                 parent.insertAdjacentElement("beforeend", catpill_container)
-                for (const c of ffl.lookup(this.getPhotoIDFromURL(elem.href),1)) {
+                for (const c of this.lookup(this.getPhotoIDFromURL(elem.href),1)) {
                     if (c.category) {
                         catpill_container.insertAdjacentHTML("beforeend", 
                             `<div class="ffl-catpill ffl-catpill-${c.category}"><span class="ffl-catpillname">${c.category}</span></div>`
@@ -484,17 +497,34 @@
 
     /*** Main ***/
 
-    let ffl
-    if (window.location.href.match("srsutherland.github.io/flickr-twin/")) {
-        ffl = new FlickrFaveListTwin()
-    } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/)) {
-        ffl = new FlickrFaveListPhotoPage()
-    } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/)) {
-        ffl = new FlickrFaveListPhotoList()
-    } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/)) {
-        ffl = new FlickrFaveListPhotoList()
-    } else {
-        ffl = new FlickrFaveList()
+    const loadFFL = () => {
+        let ffl
+        if (window.location.href.match("srsutherland.github.io/flickr-twin/")) {
+            ffl = new FlickrFaveListTwin()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/)) {
+            ffl = new FlickrFaveListPhotoPage()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/)) {
+            ffl = new FlickrFaveListPhotoList()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/)) {
+            ffl = new FlickrFaveListPhotoList()
+        } else {
+            ffl = new FlickrFaveList()
+        }
+        unsafeWindow.ffl = ffl
+        window.ffl_lasthref = window.location.href;
     }
-    unsafeWindow.ffl = ffl
+    loadFFL();
+
+    //now set up extension reload for soft page navigation
+    const targetNode = document.getElementById('content');
+    const observerOptions = { childList: true, attributes: true, subtree: false };
+    (new MutationObserver( () => {
+        console.log("observed mutation")
+        if (window.ffl_lasthref !== window.location.href) {
+            unsafeWindow.ffl.destroy();
+            delete unsafeWindow.ffl
+            console.log(`Navigated to ${window.location.href}`)
+            loadFFL()
+        }
+    })).observe(targetNode, observerOptions);
 })();
