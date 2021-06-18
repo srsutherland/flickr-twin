@@ -35,6 +35,11 @@ export class FlickrAPI {
         console.log(this.toString());
     }
 
+    /**
+     * Sets the api key for the app to use, and grabs any previous call history 
+     * from local storage if it exists.
+     * @param {string} api_key 
+     */
     setAPIKey(api_key) {
         this.api_key = api_key;
         window.localStorage["api_key"] = api_key;
