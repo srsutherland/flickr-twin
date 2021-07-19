@@ -198,7 +198,7 @@ export class Progress {
 
     log(msg) {
         if (this.renderer instanceof Renderer) {
-            let percentage = 100 * (this.pages_processed + this.duplicates + this.errors) / this.total_pages;
+            let percentage = 100 * (this.pages_processed + this.errors) / this.total_pages;
             this.renderer.displayProgress(percentage, this.toString());
         }
         if (!this.renderer || window.verbose_mode) {
