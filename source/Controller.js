@@ -33,11 +33,11 @@ export class Controller {
                 for (let p = 2; p <= pages; p++) {
                     progress.awaitSub(this.api.getImageFavorites(photo_id, p).then((response) => {
                         this.udb.add(response);
-                        progress.subUpdate(`${photo_id} ${p}`); //TODO remove debugging info
+                        progress.subUpdate(`${photo_id} ${p}`);
                     }));
                 }
                 this.udb.add(response);
-                progress.update(`${photo_id} ${1}`); //TODO remove debugging info
+                progress.update(`${photo_id} ${1}`);
             }).catch(error => {
                 this._processed_images.delete(photo_id)
                 progress.error(photo_id, error)
@@ -191,12 +191,14 @@ export class Progress {
     }
 
     toString() {
-        return `${this.inputs_processed}/${this.total_inputs} : ${this.pages_processed}/${this.total_pages}`;
+        const dups = this.duplicates ? `, ${this.duplicates} dups` : "";
+        const errs = this.errors ? `, ${this.errors} errs` : "";
+        return `${this.inputs_processed}/${this.total_inputs} : ${this.pages_processed}/${this.total_pages}${dups}${errs}`;
     }
 
     log(msg) {
         if (this.renderer instanceof Renderer) {
-            let percentage = 100 * this.pages_processed / this.total_pages;
+            let percentage = 100 * (this.pages_processed + this.duplicates + this.errors) / this.total_pages;
             this.renderer.displayProgress(percentage, this.toString());
         }
         if (!this.renderer || window.verbose_mode) {
@@ -236,10 +238,10 @@ export class Progress {
         }
     }
 
-    error(input_id, msg) {
+    error(input_id, msg = "") {
         this.errors += 1
         if (input_id) {
-            console.error(`Error processing ${input_id}${msg ? ": " + msg : ""}`);
+            console.error(`Error processing ${input_id}${msg}`);
         }
     }
 
@@ -276,6 +278,10 @@ export class Progress {
         let msg = `Done. Processed ${this.inputs_processed}/${this.number_of_inputs} items over ${this.pages_processed} requests`
         if (this.duplicates) {
             msg += ` with ${this.duplicates} duplicates`
+        }
+        if (this.errors) {
+            const prefix = this.duplicates ? "and" : "with"
+            msg += ` ${prefix} ${this.errors} errors`
         }
         console.log(msg + ".");
     }
