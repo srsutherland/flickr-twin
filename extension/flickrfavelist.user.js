@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.06.17
+// @version      2021.09.23
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -30,21 +30,32 @@
             this.categories = GM_SuperValue.get("categories", [])
             this.subcategories = GM_SuperValue.get("subcategories", [])
             this.lists = {};
-            let logText = this.constructor.name + ": "
-            for (const cat of this.categories) {
-                this.updateList(cat)
-                logText += `${cat} (${this.lists[cat].length}), `
-            }
-            console.log(logText)
+            this.updateAll()
+            this.log()
         }
 
         destroy() {
             // clean up intervals in child classes if neccescary; otherwise, do nothing.
         }
 
+        toString() {
+            return this.constructor.name + ": " + this.categories.map(cat => `${cat} (${this.lists[cat].length})`).join(", ")
+        }
+
+        log() {
+            console.log(this.toString())
+        }
+
         updateList(category) {
             this.lists[category] = GM_SuperValue.get(category, [])
             return this.lists[category];
+        }
+
+        updateAll() {
+            for (const cat of this.categories) {
+                this.updateList(cat);
+            }
+            return this.toString()
         }
 
         export() {
@@ -215,10 +226,12 @@
                 <button id="ffl-display-lists">Display lists</button>
                 <button id="ffl-paginate-lists">Paginate lists</button>
                 <button id="ffl-process-lists">Process lists</button>
+                <button id="ffl-update-lists">Update</button>
             </div>`)
             document.getElementById("ffl-display-lists").addEventListener('click', () => { this.printLists(getChecked()) })
             document.getElementById("ffl-paginate-lists").addEventListener('click', () => { this.c.r.displayImages({ids:allCheckedItems()}) })
             document.getElementById("ffl-process-lists").addEventListener('click', () => { this.c.processPhotos(allCheckedItems()) })
+            document.getElementById("ffl-update-lists").addEventListener('click', () => { this.updateAll(); this.log(); this.hideAll() })
 
             document.head.insertAdjacentHTML("beforeend", 
             `<style>
