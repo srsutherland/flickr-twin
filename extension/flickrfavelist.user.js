@@ -326,7 +326,7 @@
             const awaited = []
             newHTML += (`<th>total pages</th><th>score</th>`)
             await Promise.allSettled(awaited)
-            for (const u of this.c.sortedList(num)) {
+            for (const u of this.c.udb.sortedList(num)) {
                 newHTML += (`<tr><td>${this.c.r.userHTML(u)}</td>`)
                 for (const cat of this.categories) {
                     const ls = this.lists[cat]
