@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.09.23
+// @version      2021.11.09
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -314,6 +314,29 @@
                 text-shadow: -2px -2px 1px #000, 2px -2px 1px #000, -2px 2px 1px #000, 2px 2px 1px #000;
             }
             </style>`)
+        }
+
+        async printUserStats(num=20, categories = this.categories) {
+            await this.awaitController()
+            this.c.r.clear()
+            let newHTML = `<table><tr><th></th>`
+            for (const cat of categories) {
+                newHTML += (`<th> ${cat.replace(/_/g, '_<wbr/>')} </th>`)
+            }
+            const awaited = []
+            newHTML += (`<th>total pages</th><th>score</th>`)
+            await Promise.allSettled(awaited)
+            for (const u of this.c.sortedList(num)) {
+                newHTML += (`<tr><td>${this.c.r.userHTML(u)}</td>`)
+                for (const cat of this.categories) {
+                    const ls = this.lists[cat]
+                    newHTML += (`<td>${ls.map(id => this.c.idb.get(id)).filter(i => i?.faved_by.includes(u.nsid)).length}</td>`)
+                }
+                newHTML += (`<td>${u.pages || "?"}</td>`)
+                newHTML += (`<td>${u.score}</td>`)
+                newHTML += (`</tr>`)
+            }
+            this.c.r.appendHTML(newHTML + `</table>`)
         }
     }
 

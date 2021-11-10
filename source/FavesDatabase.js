@@ -67,8 +67,9 @@ class FavesDatabase {
      */
     sortedList(max_count, starting_from = 0) {
         const end = max_count ? starting_from + max_count : undefined;
+        this.calculateScores()
         return this.values()
-            .sort((a, b) => { return b.favecount - a.favecount; })
+            .sort((a, b) => { return b.score - a.score; })
             .slice(starting_from, end);
     }
 
@@ -81,9 +82,10 @@ class FavesDatabase {
      */
     sortedListExcluding(exclude_list, max_count, starting_from = 0) {
         const end = max_count ? starting_from + max_count : undefined;
+        this.calculateScores()
         return this
             .excluding(exclude_list)
-            .sort((a, b) => { return b.favecount - a.favecount; })
+            .sort((a, b) => { return b.score - a.score; })
             .slice(starting_from, end);
     }
 
@@ -182,6 +184,19 @@ export class UserDatabase extends FavesDatabase {
             this.get(nsid).favecount += 1;
         }
     }
+
+    calculateScores(page_valuer) {
+        if (typeof page_valuer !== 'function') {
+            page_valuer = u => u.favecount / (Math.log2(u.pages) + 1);
+        }
+        for (const u of this.values()) {
+            if (u.pages) {
+                u.score = page_valuer(u);
+            } else {
+                u.score = u.favecount;
+            }
+        }
+    }
 }
 
 export class ImageDatabase extends FavesDatabase {
@@ -228,6 +243,20 @@ export class ImageDatabase extends FavesDatabase {
                         this.get(id).favecount -= 1;
                     }
                 }
+            }
+        }
+    }
+
+    bindUDB(udb) {
+        this.udb = udb
+    }
+
+    calculateScores() {
+        for (const i of this.values()) {
+            if (this.udb) {
+                i.score = i.faved_by.map(nsid => this.udb.get(nsid)?.score || 0).reduce((sum, cur) => sum + cur)
+            } else {
+                i.score = i.favecount
             }
         }
     }

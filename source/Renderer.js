@@ -143,7 +143,7 @@ export class Renderer {
                     <a href="${img.url}" target="_blank" class="img-link">
                         <div class="img-container" data-id="${img.id}">
                             <div><img src="${img.imgUrl}"></div>
-                            <div>${img.favecount ? img.favecount + " faves" : ""}</div>
+                            <div>${img.score ? img.score.toFixed(2) : ""}${img.score && img.favecount ? " ‧ " : ""}${img.favecount ? img.favecount + " faves" : ""}</div>
                         </div>
                     </a>
                 </div>`;

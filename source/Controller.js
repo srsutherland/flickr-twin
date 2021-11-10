@@ -7,6 +7,7 @@ export class Controller {
         this.api = new FlickrAPI();
         this.udb = new UserDatabase();
         this.idb = new ImageDatabase();
+        this.idb.bindUDB(this.udb);
         this._processed_images = new Set();
         this._excluded = new Set();
         this._hidden = new Set();
@@ -68,6 +69,11 @@ export class Controller {
         const idb = opts.discard ? {add: () => null} : this.idb;
         // Load the first page of faves for each user, get the total number of pages
         await this.api.getUserFavorites(user_id).then((response) => {
+            const user = this.udb.get(user_id)
+            if (user) {
+                user.pages = response.pages
+                user.pages_processed = user.pages_processed + 1 || 1
+            }
             const pages = Math.min(response.pages, opts.max_pages || 50);
             if (response.pages > 50) {
                 console.warn(`user ${user_id} has more than 50 pages of favorites`)
@@ -78,6 +84,9 @@ export class Controller {
                 progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
                     id_list.push(...response.photo.map(photo=>photo.id))
                     idb.add(response, { user_id: user_id });
+                    if (user) {
+                        user.pages_processed += 1
+                    }
                     progress.subUpdate()
                 }))
             }
