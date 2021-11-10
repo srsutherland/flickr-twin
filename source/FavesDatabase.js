@@ -254,7 +254,7 @@ export class ImageDatabase extends FavesDatabase {
     calculateScores() {
         for (const i of this.values()) {
             if (this.udb) {
-                i.score = i.faved_by.map(nsid => this.udb.get(nsid)?.score || 0).reduce((sum, cur) => sum + cur)
+                i.score = i.faved_by.map(nsid => this.udb.get(nsid)?.score || 0).reduce((sum, cur) => sum + cur, 0)
             } else {
                 i.score = i.favecount
             }
