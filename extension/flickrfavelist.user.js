@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.09
+// @version      2021.11.10
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -552,15 +552,17 @@
     loadFFL();
 
     //now set up extension reload for soft page navigation
-    const targetNode = document.getElementById('content');
-    const observerOptions = { childList: true, attributes: true, subtree: false };
-    (new MutationObserver( () => {
-        console.log("observed mutation")
-        if (window.ffl_lasthref !== window.location.href) {
-            unsafeWindow.ffl.destroy();
-            delete unsafeWindow.ffl
-            console.log(`Navigated to ${window.location.href}`)
-            loadFFL()
-        }
-    })).observe(targetNode, observerOptions);
+    if (!(unsafeWindow.ffl instanceof FlickrFaveListTwin)) {
+        const targetNode = document.getElementById('content');
+        const observerOptions = { childList: true, attributes: true, subtree: false };
+        (new MutationObserver( () => {
+            console.log("observed mutation")
+            if (window.ffl_lasthref !== window.location.href) {
+                unsafeWindow.ffl.destroy();
+                delete unsafeWindow.ffl
+                console.log(`Navigated to ${window.location.href}`)
+                loadFFL()
+            }
+        })).observe(targetNode, observerOptions);
+    }
 })();
