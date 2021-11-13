@@ -1,3 +1,6 @@
+/**
+ * Layer in charge of directly interacting with the HTML
+ */
 export class Renderer {
     constructor(controller) {
         this.c = controller;

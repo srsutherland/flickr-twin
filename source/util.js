@@ -1,3 +1,5 @@
+/**@file utility functions */
+
 // eslint-disable-next-line no-unused-vars
 function downloadObjectAsJson(exportObj, exportName) {
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));

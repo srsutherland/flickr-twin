@@ -147,6 +147,11 @@ class FavesDatabase {
     }
 }
 
+/**
+ * Database that stores user objects with their associated data
+ * Indexed by user nsid
+ * @extends FavesDatabase
+ */
 export class UserDatabase extends FavesDatabase {
     constructor() {
         super();
@@ -154,6 +159,11 @@ export class UserDatabase extends FavesDatabase {
         // TODO get old value from localstorage
     }
 
+    /**
+     * Takes an object containing a person's properties from the api or elsewhere and adds it to the database
+     * @param {Object} photo - an object containing the properties of a person 
+     * @returns {Object} - the added person object
+     */
     addPerson(person) {
         if (!this.has(person.nsid)) {
             this.set(person.nsid, {
@@ -170,10 +180,14 @@ export class UserDatabase extends FavesDatabase {
         }
     }
 
-    add(json_response) {
+    /**
+     * Parse an api response containing one or more persons and adds them to the database
+     * @param {Object} api_response - object created from a json api response
+     */
+    add(api_response) {
         //flickr.photos.getFavorites
-        const people = json_response.person;
-        const photo_id = json_response.id;
+        const people = api_response.person;
+        const photo_id = api_response.id;
         for (const person of people) {
             const nsid = person.nsid;
             this.addPerson(person);
@@ -199,6 +213,11 @@ export class UserDatabase extends FavesDatabase {
     }
 }
 
+/**
+ * Database that stores photo objects with their associated data
+ * Indexed by photo id
+ * @extends FavesDatabase
+ */
 export class ImageDatabase extends FavesDatabase {
     constructor() {
         super();
@@ -206,6 +225,11 @@ export class ImageDatabase extends FavesDatabase {
         // TODO get old value from localstorage
     }
 
+    /**
+     * Takes an object containing an image's properties from the api or elsewhere and adds it to the database
+     * @param {Object} photo - an object containing the properties of an image 
+     * @returns {Object} - the added photo object
+     */
     addPhoto(photo) {
         if (!this.has(photo.id)) {
             const owner = typeof photo.owner == "string" ? photo.owner : photo.owner.nsid;
@@ -226,12 +250,19 @@ export class ImageDatabase extends FavesDatabase {
         }
     }
 
-    add(json_response, opts={}) {
+    /**
+     * Parse an api response containing one or more photos and adds them to the database
+     * @param {Object} api_response - object created from a json api response
+     * @param {Object} [opts] 
+     * @param {bool} [opts.nofavecount] - if truthy, do not incremnt image fave count
+     * @param {string} [opts.user_id] - nsid of the user the response is for, to record in image.faved_by
+     */
+    add(api_response, opts={}) {
         //flickr.photos.getInfo
-        if (json_response.id && !this.has(json_response.id)) {
-            this.addPhoto(json_response);
+        if (api_response.id && !this.has(api_response.id)) {
+            this.addPhoto(api_response);
         } else { //flickr.favorites.getPublicList
-            const photos = json_response.photo;
+            const photos = api_response.photo;
             for (const photo of photos) {
                 const id = photo.id;
                 const record = this.addPhoto(photo);

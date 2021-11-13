@@ -1,2 +1,5 @@
 keys.txt
 test-files
+out
+tmp
+node_modules

@@ -2,6 +2,9 @@ import { UserDatabase, ImageDatabase } from "./FavesDatabase.js";
 import { FlickrAPI } from "./FlickrAPI.js"
 import { Renderer } from "./Renderer.js"
 
+/**
+ * Controller Object. Handles main control flow and instantiates + directs the other objects
+ */
 export class Controller {
     constructor() {
         this.api = new FlickrAPI();
@@ -181,6 +184,9 @@ export class Controller {
     }
 }
 
+/**
+ * Used to track and display progress of long controller methods
+ */
 export class Progress {
     constructor(total_inputs) {
         this.number_of_inputs = total_inputs;

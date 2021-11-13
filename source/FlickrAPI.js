@@ -1,3 +1,8 @@
+/**
+ * Wrapper for the Flickr API
+ * Provides wrapper functions for various api methods while keeping track of resource limits
+ * Maintains a api keys and their associated resource limits
+ */
 export class FlickrAPI {
     /**
      * Create the api wrapper

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.10
+// @version      2021.11.11
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -25,6 +25,9 @@
         console.log(`Loaded ${GM_info.script.name} version ${GM_info.script.version}`)
     }
 
+    /**
+     * Base Extension Class
+     */
     class FlickrFaveList {
         constructor() {
             this.categories = GM_SuperValue.get("categories", [])
@@ -38,19 +41,37 @@
             // clean up intervals in child classes if neccescary; otherwise, do nothing.
         }
 
+        /**
+         * Return a string representation of this object, listing the type, categories, and
+         * how many items they include. Example:
+         * FFLTwinApp: best (20), good (34), less_good (42), exclude (29), e404 (4)
+         * @returns {string} - 
+         */
         toString() {
             return this.constructor.name + ": " + this.categories.map(cat => `${cat} (${this.lists[cat].length})`).join(", ")
         }
 
+        /**
+         * Log the string representation of this object to the console
+         */
         log() {
             console.log(this.toString())
         }
 
+        /**
+         * Update a category from local storage
+         * @param {string} category 
+         * @returns {Array} - The updated list
+         */
         updateList(category) {
             this.lists[category] = GM_SuperValue.get(category, [])
             return this.lists[category];
         }
 
+        /**
+         * Update all categories from local storage
+         * @returns {string} - updated string representation of this object
+         */
         updateAll() {
             for (const cat of this.categories) {
                 this.updateList(cat);
@@ -58,6 +79,9 @@
             return this.toString()
         }
 
+        /**
+         * Export extension data to a JSON file
+         */
         export() {
             const keys = ["categories", "subcategories", ...this.categories, ...this.subcategories, "sourceURL", "db"]
             let exportObj = {}
@@ -67,6 +91,10 @@
             downloadObjectAsJson(exportObj, "ffl_export")
         }
     
+        /**
+         * Import extension setting from an object (usually a previously exported JSON string)
+         * @param {Object} settings_obj - Object containing extension settings to save
+         */
         import(settings_obj) {
             for (const [k,v] of Object.entries(settings_obj)) {
                 GM_SuperValue.set(k, v)
@@ -81,6 +109,13 @@
             }
         }
 
+        /**
+         * Add an image to a given category by id
+         * @throws {TypeError} if either argument is not a string
+         * @param {string} category - category to add to
+         * @param {string} id - image id to add
+         * @returns {number} - new length of list, or -1 it is already in the list
+         */
         addItem(category, id) {
             assertIsString(category)
             assertIsString(id)
@@ -94,6 +129,13 @@
             }
         }
 
+        /**
+         * Remove an image from a given category by id
+         * @throws {TypeError} if either argument is not a string
+         * @param {string} category - category to remove from
+         * @param {string} id - image id to remove
+         * @returns {number} - the index of the removed item, (-1 if not found)
+         */
         removeItem(category, id) {
             assertIsString(category)
             assertIsString(id)
@@ -106,6 +148,10 @@
             return ndx;
         }
 
+        /**
+         * Debugging maintainance function
+         * Remove any nulls from categories.
+         */
         removeNulls() {
             for (const category of this.categories) {
                 const ls = this.updateList(category)
@@ -115,6 +161,14 @@
             }
         }
 
+        /**
+         * Record the url of the page an image is first added from
+         * (This stores whether it was from browsing a user's favorites, the author's photostream, or neither)
+         * Called when an image is added
+         * @throws {TypeError} if either argument is not a string
+         * @param {string} id - image id
+         * @param {string} url - url (of current page) that id was first added
+         */
         addSourceUrl(id, url) {
             assertIsString(id)
             assertIsString(url)
@@ -127,9 +181,15 @@
             }
         }
 
-        lookup(id, json) {
+        /**
+         * Get the stored data for a given image id
+         * @param {string} id - image id
+         * @param {boolean} log - if truthy, log the info to the console
+         * @returns {Object} - object containing categories and source url for a given image, if any
+         */
+        lookup(id, logInfo) {
             const rvalue = []
-            const log = (msg) => { if (!json) { console.log(msg) } }
+            const log = (msg) => { if (logInfo) { console.log(msg) } }
             for (const cat of this.categories) {
                 const ndx = this.lists[cat].indexOf(id)
                 if (ndx !== -1) {
@@ -145,16 +205,17 @@
             if (rvalue.length === 0) {
                 log(`"${id}" not found`)
             }
-            if (json) {
-                return rvalue;
-            }
+            return rvalue;
         }
     }
 
-    class FlickrFaveListTwin extends FlickrFaveList {
+    /**
+     * Mode for the Flicker Twin Finder app
+     * @extends FlickrFaveList
+     */
+    class FFLTwinApp extends FlickrFaveList {
         constructor() {
             super()
-
             this.awaitController().then(() => {
                 this.hideAll()
                 this.pushPhotoInfo()
@@ -162,6 +223,10 @@
             this.createAdvancedPanel()
         }
 
+        /**
+         * Wait for the Flickr Twin Finder app to initialise before trying to use it
+         * @returns {Promise} - resolves once a reference to the controller has been obtained
+         */
         async awaitController() {
             if (this.c != undefined) {
                 return
@@ -175,6 +240,9 @@
             }
         }
 
+        /**
+         * Tell the FTF app to hide all the images we've already categorized from the photo list view
+         */
         async hideAll() {
             await this.awaitController()
             for (const list of Object.values(this.lists)) {
@@ -183,6 +251,9 @@
             console.log("All lists hidden")
         }
 
+        /**
+         * Push stored photo info (used to display images without another apit request) to the FTF app
+         */
         async pushPhotoInfo() {
             await this.awaitController()
             const db = GM_SuperValue.get("db", [])
@@ -192,17 +263,24 @@
             iqwerty.toast.toast('Photo info synced from extension')
         }
 
+        /**
+         * For any image the extension has categorized, pull from FTF enough photo info 
+         * to display the image without another api request
+         */
         async pullPhotoInfo() {
             await this.awaitController()
             await this.pushPhotoInfo()
             const newdb = [].concat(...Object.values(this.lists))
                 .map(i => this.c.idb.get(i))
-                .filter(i => i)
+                .filter(i => i) //remove nulls
                 .map(p => {return {id:p.id, owner:p.owner, secret:p.secret, server:p.server}})
             GM_SuperValue.set("db", newdb)
             iqwerty.toast.toast('Photo info synced to extension')
         }
 
+        /**
+         * Add FFL-specific controls to the FTF app control panel
+         */
         createAdvancedPanel() {
             if (document.getElementById("control-advanced-dynamic") == null) {
                 const fold = document.getElementById("control-advanced-fold")
@@ -266,6 +344,11 @@
             </style>`)
         }
 
+        /**
+         * Tell the FTF app to display the image in the given categories
+         * Each category gets a header and a different-hued indent border
+         * @param {Array<string>} categories 
+         */
         async printLists(categories = this.categories) {
             await this.awaitController()
             await this.pushPhotoInfo()
@@ -286,6 +369,11 @@
             unsafeWindow.c.r.renderParent = main
         }
 
+        /**
+         * Debug function
+         * Put the app in a mode where clicking on a photo changes its category
+         * @param {Array<string>} categories 
+         */
         async sortingMode(categories) {
             const cats = categories || this.categories
             await this.printLists(cats)
@@ -316,6 +404,11 @@
             </style>`)
         }
 
+        /**
+         * List the top n users in a table that displays how many hits there wer from each list
+         * @param {number} num - Max number of users
+         * @param {Array<string>} categories 
+         */
         async printUserStats(num=20, categories = this.categories) {
             await this.awaitController()
             this.c.r.clear()
@@ -340,23 +433,31 @@
         }
     }
 
-    class FlickrFaveListPhotoPage extends FlickrFaveList {
+    /**
+     * Mode for Flickr photo pages
+     * @extends FlickrFaveList
+     */
+    class FFLPhotoPage extends FlickrFaveList {
         constructor() {
             super()
             this.url = window.location.href
             this.photoID = window.location.href.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)[1]
             this.checkIf404()
             this.createControlPanel()
-            this.lookup(this.photoID) //Prints stored url to console
+            this.lookup(this.photoID, true) //Prints categories and stored url to console
             this.addPhotoStreamLinkIfAbsent()
             //the link gets removed from the page after a while for some reason. Bodge to fix that.
             this.pslinkinterval = setInterval(() => { if (document.hasFocus()) this.addPhotoStreamLinkIfAbsent() }, 1000);
         }
 
         destroy() {
+            //clean up photostream link adder interval
             clearInterval(this.pslinkinterval)
         }
 
+        /**
+         * Create the ffl control panel under the image with buttons to add and remove it from categories
+         */
         createControlPanel() {
             try {
                 this.cp = document.createElement("div")
@@ -396,6 +497,9 @@
             }
         }
 
+        /**
+         * Add a "Back to [author] photostream" link if the referrer is another page (e.g. user favorites)
+         */
         addPhotoStreamLinkIfAbsent() {
             const userID = window.location.href.match(/flickr\.com\/photos\/([\w-]+|\d+@N\d\d)\/\d+[/$]/i)[1]
             const psURL = `/photos/${userID}/with/${this.photoID}/`
@@ -406,6 +510,9 @@
             }
         }
 
+        /**
+         * Check if the current page was a 404 error; if so, add item to the e404 list.
+         */
         checkIf404() {
             urlExists(this.url).then( ok => {
                 if (!ok) {
@@ -417,7 +524,11 @@
         }
     }
 
-    class FlickrFaveListPhotoList extends FlickrFaveList {
+    /**
+     * Mode for Flickr pages with photo lists (favorites, photostream, etc)
+     * @extends FlickrFaveList
+     */
+    class FFLPhotoList extends FlickrFaveList {
         constructor() {
             super()
             this.url = window.location.href
@@ -437,10 +548,18 @@
             document.removeEventListener('scroll', this.scrollListener)
         }
 
+        /**
+         * Get the photo id from the url
+         * @param {string} url 
+         * @returns {string} - photo id
+         */
         getPhotoIDFromURL(url) {
             return url.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)[1]
         }
 
+        /**
+         * Tell the extension to try adding category pill to the photo list
+         */
         queueCatPills() {
             if (!this.catPillsEvent.adding) {
                 this.addCatPills()
@@ -453,6 +572,9 @@
             }
         }
 
+        /**
+         * Add category pills to every categorized photo present in the photo list
+         */
         addCatPills () {
             this.catPillsEvent.adding = true
             for (const elem of document.querySelectorAll(".photo-list-photo-view a.overlay")) {
@@ -463,7 +585,7 @@
                 const catpill_container = document.createElement("div")
                 catpill_container.classList.add("ffl-catpill-contain")
                 parent.insertAdjacentElement("beforeend", catpill_container)
-                for (const c of this.lookup(this.getPhotoIDFromURL(elem.href),1)) {
+                for (const c of this.lookup(this.getPhotoIDFromURL(elem.href))) {
                     if (c.category) {
                         catpill_container.insertAdjacentHTML("beforeend", 
                             `<div class="ffl-catpill ffl-catpill-${c.category}"><span class="ffl-catpillname">${c.category}</span></div>`
@@ -536,13 +658,13 @@
     const loadFFL = () => {
         let ffl
         if (window.location.href.match("srsutherland.github.io/flickr-twin/")) {
-            ffl = new FlickrFaveListTwin()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/)) {
-            ffl = new FlickrFaveListPhotoPage()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/)) {
-            ffl = new FlickrFaveListPhotoList()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/)) {
-            ffl = new FlickrFaveListPhotoList()
+            ffl = new FFLTwinApp()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/)) { //Photo page
+            ffl = new FFLPhotoPage()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/)) { //Photostream
+            ffl = new FFLPhotoList()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/)) { //Favorites
+            ffl = new FFLPhotoList()
         } else {
             ffl = new FlickrFaveList()
         }
@@ -551,9 +673,12 @@
     }
     loadFFL();
 
-    //now set up extension reload for soft page navigation
-    if (!(unsafeWindow.ffl instanceof FlickrFaveListTwin)) {
+    //now set up extension reload for soft page navigation on the Flickr website
+    if (!(unsafeWindow.ffl instanceof FFLTwinApp)) {
         const targetNode = document.getElementById('content');
+        if (targetNode == undefined) {
+            console.warn("Could not find content element")
+        }
         const observerOptions = { childList: true, attributes: true, subtree: false };
         (new MutationObserver( () => {
             console.log("observed mutation")
