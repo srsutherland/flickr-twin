@@ -60,6 +60,31 @@ class FavesDatabase {
     }
 
     /**
+     * Calculate and set the favescore for each item in the db.
+     * Defaults to number of faves if no other scoring function is provided to the function or fdb object
+     * @param {function(object):number} scorer - a function that takes a db item and returns a score
+     */
+    calculateScores(scorer = this.scorer) {
+        if (typeof scorer !== 'function') {
+            scorer = i => i.favecount;
+        }
+        for (const i of this.values()) {
+            i.score = scorer(i);
+        }
+    }
+
+    /**
+     * Sets the method used to calculate favescore
+     * @param {function(object):number} scorer - a function that takes a db item and returns a score
+     */
+    setScorer(scorer) {
+        if (typeof scorer !== 'function') {
+            throw new TypeError("scorer must be a function")
+        }
+        this.scorer = scorer
+    }
+
+    /**
      * Returns an Array of the contents of the db, sorted by fave count (highest first)
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
@@ -156,7 +181,10 @@ export class UserDatabase extends FavesDatabase {
     constructor() {
         super();
         this.storageKey = "udb";
-        // TODO get old value from localstorage
+        this.scorer = u => 
+            u.pages ? 
+                u.favecount / (Math.log2(u.pages) + 1) : 
+                u.favecount;
     }
 
     /**
@@ -198,19 +226,6 @@ export class UserDatabase extends FavesDatabase {
             this.get(nsid).favecount += 1;
         }
     }
-
-    calculateScores(page_valuer) {
-        if (typeof page_valuer !== 'function') {
-            page_valuer = u => u.favecount / (Math.log2(u.pages) + 1);
-        }
-        for (const u of this.values()) {
-            if (u.pages) {
-                u.score = page_valuer(u);
-            } else {
-                u.score = u.favecount;
-            }
-        }
-    }
 }
 
 /**
@@ -222,7 +237,10 @@ export class ImageDatabase extends FavesDatabase {
     constructor() {
         super();
         this.storageKey = "idb";
-        // TODO get old value from localstorage
+        this.scorer = i => 
+            this.udb ?
+                i.score = i.faved_by.map(nsid => this.udb.get(nsid)?.score || 0).reduce((sum, cur) => sum + cur, 0) : 
+                i.favecount
     }
 
     /**
@@ -280,15 +298,5 @@ export class ImageDatabase extends FavesDatabase {
 
     bindUDB(udb) {
         this.udb = udb
-    }
-
-    calculateScores() {
-        for (const i of this.values()) {
-            if (this.udb) {
-                i.score = i.faved_by.map(nsid => this.udb.get(nsid)?.score || 0).reduce((sum, cur) => sum + cur, 0)
-            } else {
-                i.score = i.favecount
-            }
-        }
     }
 }
