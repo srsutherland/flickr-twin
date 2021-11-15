@@ -31,17 +31,12 @@ export class Controller {
             //Load the first page of faves for each image, get total number of pages
             progress.await(this.api.getImageFavorites(photo_id).then((response) => {
                 const pages = response.pages;
-                console.log("%s: %s pages", photo_id, pages) //TODO remove debugging info
                 progress.updatePages(pages)
                 // Load each subpage
                 for (let p = 2; p <= pages; p++) {
-                    progress.awaitSub(this.api.getImageFavorites(photo_id, p).then((response) => {
-                        this.udb.add(response);
-                        progress.subUpdate(`${photo_id} ${p}`);
-                    }));
+                    progress.awaitSub(this.api.getImageFavorites(photo_id, p).then(response => this.udb.add(response)));
                 }
                 this.udb.add(response);
-                progress.update(`${photo_id} ${1}`);
             }).catch(error => {
                 this._processed_images.delete(photo_id)
                 progress.error(photo_id, error)
@@ -75,27 +70,25 @@ export class Controller {
             const user = this.udb.get(user_id)
             if (user) {
                 user.pages = response.pages
-                user.pages_processed = user.pages_processed + 1 || 1
+                user.pages_processed = user.pages_processed || 0
             }
             const pages = Math.min(response.pages, opts.max_pages || 50);
             if (response.pages > 50) {
                 console.warn(`user ${user_id} has more than 50 pages of favorites`)
             }
             progress.updatePages(pages);
+            const handleResponse = (response) => {
+                id_list.push(...response.photo.map(photo=>photo.id))
+                idb.add(response, { user_id: user_id });
+                if (user) {
+                    user.pages_processed += 1
+                }
+            }
             // Load each subpage
             for (let i = 2; i <= pages; i++) {
-                progress.awaitSub(this.api.getUserFavorites(user_id, i).then((response) => {
-                    id_list.push(...response.photo.map(photo=>photo.id))
-                    idb.add(response, { user_id: user_id });
-                    if (user) {
-                        user.pages_processed += 1
-                    }
-                    progress.subUpdate()
-                }))
+                progress.awaitSub(this.api.getUserFavorites(user_id, i).then(handleResponse))
             }
-            id_list.push(...response.photo.map(photo=>photo.id))
-            idb.add(response, { user_id: user_id });
-            progress.update();
+            handleResponse(response)
         }).catch(error => {
             progress.error(user_id, error)
         })
@@ -129,7 +122,6 @@ export class Controller {
             if (!this.idb.has(photo_id)) {
                 progress.await(this.api.getPhotoInfo(photo_id).then(response => {
                     this.idb.add(response)
-                    progress.update()
                 }).catch(error => {
                     progress.error(photo_id, error)
                 }))
@@ -264,16 +256,18 @@ export class Progress {
      * Collects promises from primary api calls
      * @param {Promise} promise 
      */
-    await(promise) {
+    await(promise, updateMsg) {
         this.awaited.push(promise)
+        promise.then(() => this.update(updateMsg))
     }
 
     /**
      * Collects promises from secondary api calls
      * @param {Promise} promise 
      */
-    awaitSub(promise) {
+    awaitSub(promise, updateMsg) {
         this.awaitedSub.push(promise)
+        promise.then(() => this.subUpdate(updateMsg))
     }
 
     /**
