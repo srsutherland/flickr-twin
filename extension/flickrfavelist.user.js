@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.11
+// @version      2021.11.13
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -33,6 +33,7 @@
             this.categories = GM_SuperValue.get("categories", [])
             this.subcategories = GM_SuperValue.get("subcategories", [])
             this.lists = {};
+            this.weights = GM_SuperValue.get("weights", {})
             this.updateAll()
             this.log()
         }
@@ -83,7 +84,7 @@
          * Export extension data to a JSON file
          */
         export() {
-            const keys = ["categories", "subcategories", ...this.categories, ...this.subcategories, "sourceURL", "db"]
+            const keys = ["categories", "subcategories", ...this.categories, ...this.subcategories, "weights", "sourceURL", "db"]
             let exportObj = {}
             for (const k of keys) {
                 exportObj[k] = GM_SuperValue.get(k, [])
@@ -216,11 +217,20 @@
     class FFLTwinApp extends FlickrFaveList {
         constructor() {
             super()
+            this.weights = GM_SuperValue.get("weights", {})
+            for (const cat of this.categories) {
+                this.weights[cat] = this.weights[cat] || 1
+            }
             this.awaitController().then(() => {
                 this.hideAll()
                 this.pushPhotoInfo()
             })
             this.createAdvancedPanel()
+        }
+
+        destroy() {
+            //when the page closes, save db data
+            this.pullPhotoInfo()
         }
 
         /**
@@ -287,17 +297,36 @@
                 fold.insertAdjacentHTML("beforeend", `<div id="control-advanced-dynamic"></div>`)
             }
             const ap = document.getElementById("control-advanced-dynamic");
+
+            // Category checkboxes
             ap.insertAdjacentHTML("beforeend", `<form id="ffl-lists"></form>`)
             const checkboxForm = document.getElementById("ffl-lists");
 
             for (let [cat, list] of Object.entries(this.lists)){
                 let label = `${cat} (${list.length})`
-                let newHTML = `<label class="ffl-list-check"><input type="checkbox" id="ffl-lists-${cat}" name="ffl-lists" value="${cat}"><span>${label}</span></label> `
-                checkboxForm.insertAdjacentHTML("beforeend", newHTML)
+                let catHTML = `<label class="ffl-list-check"><input type="checkbox" id="ffl-lists-${cat}" name="ffl-lists" value="${cat}"><span>${label}</span></label> `
+                checkboxForm.insertAdjacentHTML("beforeend", catHTML)
             }
 
             const getChecked = () => {return [...checkboxForm.getElementsByTagName("input")].filter(e => e.checked).map(e => e.value)}
+            this.getChecked = getChecked
             const allCheckedItems = () => [].concat(...(getChecked().map(cat => this.lists[cat])))
+            this.allCheckedItems = allCheckedItems
+
+            // Category weights
+            ap.insertAdjacentHTML("beforeend", `<form id="ffl-weights"></form>`)
+            const weightsForm = document.getElementById("ffl-weights");
+            for (let [cat, weight] of Object.entries(this.weights)){
+                let catHTML = `<label class="ffl-list-weight"><span>${cat} ×</span><input type="text" id="ffl-weights-${cat}" name="${cat}" value="${weight}" size=1></label> `
+                weightsForm.insertAdjacentHTML("beforeend", catHTML)
+            }
+
+            const getWeights = () => Object.fromEntries([...weightsForm.elements].map(e=>[e.name, Number(e.value) || 1]))
+            this.getWeights = getWeights
+            const setWeights = () => this.weights = getWeights()
+            for (const input of weightsForm.elements) {
+                input.addEventListener("input", setWeights)
+            }
 
             ap.insertAdjacentHTML("beforeend", 
             `<div>
@@ -309,7 +338,7 @@
             document.getElementById("ffl-display-lists").addEventListener('click', () => { this.printLists(getChecked()) })
             document.getElementById("ffl-paginate-lists").addEventListener('click', () => { this.c.r.displayImages({ids:allCheckedItems()}) })
             document.getElementById("ffl-process-lists").addEventListener('click', () => { this.c.processPhotos(allCheckedItems()) })
-            document.getElementById("ffl-update-lists").addEventListener('click', () => { this.updateAll(); this.log(); this.hideAll() })
+            document.getElementById("ffl-update-lists").addEventListener('click', () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
 
             document.head.insertAdjacentHTML("beforeend", 
             `<style>
@@ -340,6 +369,14 @@
                 color: #faa;
                 font-weight: bold;
                 text-shadow: 1px 1px 3px black;
+            }
+
+            .ffl-list-weight {
+                margin-right: 1em;
+            }
+
+            .ffl-list-weight input {
+                width: 2em;
             }
             </style>`)
         }
@@ -405,20 +442,19 @@
         }
 
         /**
-         * List the top n users in a table that displays how many hits there wer from each list
+         * List the top n users in a table that displays how many hits there were from each list
          * @param {number} num - Max number of users
          * @param {Array<string>} categories 
          */
         async printUserStats(num=20, categories = this.categories) {
             await this.awaitController()
             this.c.r.clear()
+            //html is built piecemeal before appending because otherwise Chrome "helpfully" closes the tags for you
             let newHTML = `<table><tr><th></th>`
             for (const cat of categories) {
                 newHTML += (`<th> ${cat.replace(/_/g, '_<wbr/>')} </th>`)
             }
-            const awaited = []
             newHTML += (`<th>total pages</th><th>score</th>`)
-            await Promise.allSettled(awaited)
             for (const u of this.c.udb.sortedList(num)) {
                 newHTML += (`<tr><td>${this.c.r.userHTML(u)}</td>`)
                 for (const cat of this.categories) {
