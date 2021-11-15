@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.13
+// @version      2021.11.14
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -323,7 +323,7 @@
 
             const getWeights = () => Object.fromEntries([...weightsForm.elements].map(e=>[e.name, Number(e.value) || 1]))
             this.getWeights = getWeights
-            const setWeights = () => this.weights = getWeights()
+            const setWeights = () => { this.weights = getWeights(); GM_SuperValue.set("weights", this.weights) }
             for (const input of weightsForm.elements) {
                 input.addEventListener("input", setWeights)
             }
@@ -336,8 +336,8 @@
                 <button id="ffl-update-lists">Update</button>
             </div>`)
             document.getElementById("ffl-display-lists").addEventListener('click', () => { this.printLists(getChecked()) })
-            document.getElementById("ffl-paginate-lists").addEventListener('click', () => { this.c.r.displayImages({ids:allCheckedItems()}) })
-            document.getElementById("ffl-process-lists").addEventListener('click', () => { this.c.processPhotos(allCheckedItems()) })
+            document.getElementById("ffl-paginate-lists").addEventListener('click', () => { this.c.r.displayImages({ids:allCheckedItems()}); })
+            document.getElementById("ffl-process-lists").addEventListener('click', () => { this.c.processPhotos(allCheckedItems()).then(() => this.updateScores()) })
             document.getElementById("ffl-update-lists").addEventListener('click', () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
 
             document.head.insertAdjacentHTML("beforeend", 
@@ -381,6 +381,29 @@
             </style>`)
         }
 
+        async updateScores() {
+            this.awaitController()
+            const userScorer = u => {
+                if (!u.pages) {
+                    return u.favecount / 10
+                }
+                let score = 0;
+                for (const cat of this.categories) {
+                    const list = this.lists[cat]
+                    const weight = this.weights[cat]
+                    if (weight == 0) continue;
+                    for (const i of list.map(id => this.c.idb.get(id))) {
+                        if (i?.faved_by.includes(u.nsid)) {
+                            score += weight
+                        }
+                    }
+                }
+                return score / u.pages_processed + u.favecount / (10 * Math.log2(u.pages) + 1)
+            }
+            this.c.udb.setScorer(userScorer)
+            this.c.udb.calculateScores()
+        }
+
         /**
          * Tell the FTF app to display the image in the given categories
          * Each category gets a header and a different-hued indent border
@@ -407,7 +430,7 @@
         }
 
         /**
-         * Debug function
+         * Debug function - Sorting mode
          * Put the app in a mode where clicking on a photo changes its category
          * @param {Array<string>} categories 
          */

@@ -101,9 +101,11 @@ export class Renderer {
                 images = this.idb.sortedListExcluding(this.c.getHidden());
                 opts.mode = "excluding"
             } else if (opts.all || opts.mode == "all") {
+                this.udb.calculateScores()
                 images = this.idb.sortedList()
                 opts.mode = "all"
             } else {
+                this.udb.calculateScores()
                 images = this.idb.sortedListExcluding(this.c.getHidden())
                 const minfavecount = images[0]?.favecount / 5
                 if (images[0]?.favecount > 2) {
