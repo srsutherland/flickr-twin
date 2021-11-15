@@ -17,6 +17,13 @@ export class Controller {
         this.r = new Renderer(this);
     }
 
+    /**
+     * Takes a list of photo ids and queries which users have favorited them,
+     * then records those users into the udb, keeping track of which and how many 
+     * photos were favorited for each user. 
+     * Uses api.getImageFavorites() (flickr.photos.getFavorites)
+     * @param {(string[]|string)} photo_ids - an array of photo ids or a single photo id
+     */
     async processPhotos(photo_ids) {
         if (typeof photo_ids === "string") {
             photo_ids = [photo_ids]
@@ -47,6 +54,11 @@ export class Controller {
         progress.done();
     }
 
+    /**
+     * Take a list of user ids and queries their favorite photos, recording that data in the idb
+     * Uses api.getUserFavorites() (flickr.favorites.getPublicList)
+     * @param {(string[]|string)} user_ids - an array of user ids or a single user id
+     */
     async processUsers(user_ids) {
         if (typeof user_ids === "string") {
             user_ids = [user_ids]
@@ -60,6 +72,15 @@ export class Controller {
         progress.done();
     }
 
+    /**
+     * Load all pages of favorites for a user and add them to the db, returning a list of favorites
+     * @param {string} user_id 
+     * @param {Object} [opts]
+     * @param {Object} [opts.discard] - do not add responses to database, only add to return value
+     * @param {Object} [opts.progress] - progress object to pass in 
+     * @param {Object} [opts.max_pages] - max pages of faves to process per user
+     * @returns {string[]} - array of photo ids that the user has favorited
+     */
     async loadUserFavorites(user_id, opts = {}) {
         const progress = opts.progress || new Progress(1)
         const id_list = [];
@@ -98,11 +119,22 @@ export class Controller {
         return id_list;
     }
 
+    /**
+     * Query the favorite photos of the given user and then process them
+     * Uses api.getUserFavorites() (flickr.favorites.getPublicList)
+     * Uses api.getImageFavorites() (flickr.photos.getFavorites)
+     * @param {string} user_id 
+     */
     async processPhotosFromUser(user_id) {
         const photo_ids = await this.loadUserFavorites(user_id, {discard: true})
         await this.processPhotos(photo_ids)
     }
 
+    /**
+     * Process the favorites of the top num users in the database by score
+     * @param {number} num - number of users to process
+     * @param {number} starting_from - start from the nth user
+     */
     async processUsersFromDB(num = 20, starting_from = 0) {
         const users = this.udb.sortedList(num, starting_from).map(user => user.nsid)
         await this.processUsers(users);
@@ -192,6 +224,11 @@ export class Progress {
         this.awaitedSub = [];
     }
 
+    /**
+     * Set the renderer that gets called on log()
+     * @param {Renderer} renderer_object 
+     * @returns {Progress} - a reference to this object
+     */
     renderWith(renderer_object) {
         this.renderer = renderer_object;
         return this;
@@ -203,6 +240,10 @@ export class Progress {
         return `${this.inputs_processed}/${this.total_inputs} : ${this.pages_processed}/${this.total_pages}${dups}${errs}`;
     }
 
+    /**
+     * Logs the status to the console, or if the renderer is set, tells it to redraw the progress bar
+     * @param {string} msg - additional message to display
+     */
     log(msg) {
         if (this.renderer instanceof Renderer) {
             let percentage = 100 * (this.pages_processed + this.errors) / this.total_pages;
@@ -217,6 +258,11 @@ export class Progress {
         }
     }
 
+    /**
+     * Adds to the total number of pages
+     * Called when a request first returns the number of pages of results
+     * @param {*} pages - number of pages
+     */
     updatePages(pages) {
         // in some cases, there can be zero pages of results
         if (pages) {
@@ -225,17 +271,30 @@ export class Progress {
         }
     }
 
+    /**
+     * Called when a primary request is completed
+     * @param {string} msg - additional message to display
+     */
     update(msg) {
         this.inputs_processed += 1;
         this.pages_processed += 1;
         this.log(msg)
     }
 
+    /**
+     * Called when a subpage request is completed
+     * @param {string} msg - additional message to display
+     */
     subUpdate(msg) {
         this.pages_processed += 1;
         this.log(msg)
     }
 
+    /**
+     * Indicate that an item is a duplicate and will not be processed,
+     * so remove it from the progress total
+     * @param {string} input_id - id of the duplicate item
+     */
     duplicate(input_id) {
         this.duplicates += 1;
         this.total_inputs -= 1;
@@ -245,6 +304,11 @@ export class Progress {
         }
     }
 
+    /**
+     * Called on error processing an item
+     * @param {string} input_id - id of the item causing the error
+     * @param {string} msg - additional message to display, usually the original error message
+     */
     error(input_id, msg = "") {
         this.errors += 1
         if (input_id) {
