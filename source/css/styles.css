@@ -10,6 +10,10 @@ input, textarea, select, button {
     color: #e8e6e3;
 }
 
+button:not(:first-child) {
+    margin-left: .5em;
+}
+
 a {
     color: #3399ff;
     cursor: pointer;

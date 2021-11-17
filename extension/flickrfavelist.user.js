@@ -25,6 +25,10 @@
         console.log(`Loaded ${GM_info.script.name} version ${GM_info.script.version}`)
     }
 
+    //dev, change if need
+    const localhosturl = null && "http://localhost:8000"
+    // @match        http://localhost:8000
+
     /**
      * Base Extension Class
      */
@@ -89,7 +93,7 @@
             for (const k of keys) {
                 exportObj[k] = GM_SuperValue.get(k, [])
             }
-            downloadObjectAsJson(exportObj, "ffl_export")
+            downloadObjectAsJson(exportObj, "ffl_export-"+new Date().toISOString())
         }
     
         /**
@@ -321,24 +325,27 @@
                 weightsForm.insertAdjacentHTML("beforeend", catHTML)
             }
 
-            const getWeights = () => Object.fromEntries([...weightsForm.elements].map(e=>[e.name, Number(e.value) || 1]))
+            const getWeights = () => Object.fromEntries([...weightsForm.elements].map(e=>[e.name, Number(e.value) || 0]))
             this.getWeights = getWeights
             const setWeights = () => { this.weights = getWeights(); GM_SuperValue.set("weights", this.weights) }
             for (const input of weightsForm.elements) {
                 input.addEventListener("input", setWeights)
             }
 
-            ap.insertAdjacentHTML("beforeend", 
-            `<div>
-                <button id="ffl-display-lists">Display lists</button>
-                <button id="ffl-paginate-lists">Paginate lists</button>
-                <button id="ffl-process-lists">Process lists</button>
-                <button id="ffl-update-lists">Update</button>
-            </div>`)
-            document.getElementById("ffl-display-lists").addEventListener('click', () => { this.printLists(getChecked()) })
-            document.getElementById("ffl-paginate-lists").addEventListener('click', () => { this.c.r.displayImages({ids:allCheckedItems()}); })
-            document.getElementById("ffl-process-lists").addEventListener('click', () => { this.c.processPhotos(allCheckedItems()).then(() => this.updateScores()) })
-            document.getElementById("ffl-update-lists").addEventListener('click', () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
+            ap.insertAdjacentHTML("beforeend", `<div id="ffl-buttons"></div>`)
+            const addButton = (id, label, clickHandler) => {
+                const button = document.createElement("button")
+                button.id = id;
+                button.textContent = label;
+                button.addEventListener('click', clickHandler)
+                document.getElementById("ffl-buttons").insertAdjacentElement("beforeend", button)
+            }
+            addButton("ffl-display-lists", "Display lists", () => { this.printLists(getChecked()) })
+            addButton("ffl-paginate-lists", "Paginate lists", () => { this.c.r.displayImages({ids:allCheckedItems()}); })
+            addButton("ffl-process-lists", "Process lists", () => { this.c.processPhotos(allCheckedItems()).then(() => this.updateScores()) })
+            addButton("ffl-process-twins", "Smart process twins", () => { this.c.processUsersFromDBSmart(); })
+            addButton("ffl-update-lists", "Display user stats", () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
+            addButton("ffl-user-stats", "Update", () => { this.printUserStats(); })
 
             document.head.insertAdjacentHTML("beforeend", 
             `<style>
@@ -716,7 +723,7 @@
 
     const loadFFL = () => {
         let ffl
-        if (window.location.href.match("srsutherland.github.io/flickr-twin/")) {
+        if (window.location.href.match("srsutherland.github.io/flickr-twin/") || window.location.href.match(localhosturl)) {
             ffl = new FFLTwinApp()
         } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/)) { //Photo page
             ffl = new FFLPhotoPage()
