@@ -138,11 +138,19 @@ export class Controller {
      * @param {number} starting_from - start from the nth user
      */
     async processUsersFromDB(num = 20, starting_from = 0) {
+        if (this.udb.size == 0) {
+            this.r.warnMessage("You have to find some twins first!");
+            return Promise.reject("UserDatabase was empty")
+        }
         const users = this.udb.sortedList(num, starting_from).map(user => user.nsid)
         await this.processUsers(users);
     }
 
     async processUsersFromDBSmart(max_requests = 1000) {
+        if (this.udb.size == 0) {
+            this.r.warnMessage("You have to find some twins first!");
+            return Promise.reject("UserDatabase was empty")
+        }
         let resources_remaining = Math.min(this.api.getRemainingAPICalls(), max_requests)
         const maxUsers = Math.min(Math.floor(resources_remaining/5), 100)
         const sortedUsers = this.udb.sortedList(Math.min(resources_remaining, 1000))

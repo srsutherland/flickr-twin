@@ -59,6 +59,10 @@ class FavesDatabase {
         return Object.entries(this.db)
     }
 
+    size() {
+        return Object.keys(this.db).length
+    }
+
     /**
      * Calculate and set the favescore for each item in the db.
      * Defaults to number of faves if no other scoring function is provided to the function or fdb object

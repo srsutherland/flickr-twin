@@ -379,4 +379,30 @@ export class Renderer {
             progressbar_div: progressbar_div, message_div: message_div 
         }
     }
+
+    errorMessage(message) {
+        this.clear()
+        this.appendHTML(`
+        <div class="flex centered errormessage">
+            ${message}  
+        </div>
+        `);
+        console.error("displaying: " + message)
+        this.displaying = { 
+            f: this.errorMessage, message: message
+        }
+    }
+
+    warnMessage(message) {
+        this.clear()
+        this.appendHTML(`
+        <div class="flex centered warnMessage">
+            ${message}  
+        </div>
+        `);
+        console.warn("displaying: " + message)
+        this.displaying = { 
+            f: this.warnMessage, message: message
+        }
+    }
 }

@@ -35,6 +35,25 @@ select:-webkit-autofill {
     color: #e8e6e3 !important;
 }
 
+.errormessage {
+    padding: 1em;
+    margin: 1em;
+    border-radius: 1em;
+    color: #ff8080;
+    background-color: #290200;
+    border: 2px solid #5c0801;
+}
+
+.warnmessage {
+    font-size: 1.1em;
+    padding: 0.7em;
+    margin: 1em;
+    border-radius: 1em;
+    color: #f2ab25;
+    background-color: #332b00;
+    border: 2px solid #665500;
+}
+
 /* Basic layout */
 
 .flex {
