@@ -49,6 +49,7 @@ export class Controller {
                 progress.error(photo_id, error)
             }));
         }
+        progress.log()
         // Wait for all the api call promises to settle
         await progress.allSettled()
         progress.done();
@@ -67,6 +68,7 @@ export class Controller {
         for (const user_id of user_ids) {
             progress.await(this.loadUserFavorites(user_id, {progress: progress}))
         }
+        progress.log()
         // Wait for all the api call promises to settle
         await progress.allSettled();
         progress.done();
@@ -87,6 +89,7 @@ export class Controller {
         // If "discard" opt is set, change idb to a dummy object that discards the response
         const idb = opts.discard ? {add: () => null} : this.idb;
         // Load the first page of faves for each user, get the total number of pages
+        progress.log()
         await this.api.getUserFavorites(user_id).then((response) => {
             const user = this.udb.get(user_id)
             if (user) {
@@ -147,7 +150,7 @@ export class Controller {
         let currentUsers = sortedUsers.slice(0, maxUsers)
         const userqueue = sortedUsers.slice(maxUsers)
         const scoremult = {}
-        const progress = new Progress(currentUsers.length).renderWith(this.r)
+        const progress = new Progress().renderWith(this.r)
         console.log({resources_remaining:resources_remaining, maxUsers:maxUsers, sortedUsers:sortedUsers, currentUsers:currentUsers, userqueue:userqueue, scoremult:scoremult, progress:progress}) //TODO
         const cmp = (a, b) => b.score * scoremult[b.nsid] - a.score * scoremult[a.nsid];
         const fltr = user => user.pages !== undefined && user.pages > user.pages_processed;
@@ -193,10 +196,12 @@ export class Controller {
             //bump user's score down by 10% for sorting purposes
             scoremult[user_id] = scoremult[user_id] * 0.90
         }
+        // // logic // //
         //get those initial pages 
         for (const user of currentUsers) {
             getInitialPage(user);
         }
+        progress.log()
         //wait until 75% of requests have been processed
         await progress.waitForProgress(Math.ceil(maxUsers / 4))
         //main loop
@@ -248,6 +253,7 @@ export class Controller {
                 progress.duplicate()
             }
         }
+        progress.log()
         await progress.allSettled()
         progress.done()
     }
