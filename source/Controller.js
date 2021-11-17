@@ -140,6 +140,93 @@ export class Controller {
         await this.processUsers(users);
     }
 
+    async processUsersFromDBSmart(max_requests = 1000) {
+        let resources_remaining = Math.min(this.api.getRemainingAPICalls(), max_requests)
+        const maxUsers = Math.min(Math.floor(resources_remaining/5), 100)
+        const sortedUsers = this.udb.sortedList(Math.min(resources_remaining, 1000))
+        let currentUsers = sortedUsers.slice(0, maxUsers)
+        const userqueue = sortedUsers.slice(maxUsers)
+        const scoremult = {}
+        const progress = new Progress(currentUsers.length).renderWith(this.r)
+        console.log({resources_remaining:resources_remaining, maxUsers:maxUsers, sortedUsers:sortedUsers, currentUsers:currentUsers, userqueue:userqueue, scoremult:scoremult, progress:progress}) //TODO
+        const cmp = (a, b) => b.score * scoremult[b.nsid] - a.score * scoremult[a.nsid];
+        const fltr = user => user.pages !== undefined && user.pages > user.pages_processed;
+        //request the initial page for user when first processed
+        const getInitialPage = (user) => {
+            const user_id = user.nsid
+            user.pages = undefined;
+            user.pages_processed = undefined;
+            scoremult[user_id] = 0
+            resources_remaining -= 1
+            console.log(`getInitialpage(${user_id})`)
+            progress.updatePages(1+1)
+            progress.await(this.api.getUserFavorites(user_id).then(response => {
+                this.idb.add(response, { user_id: user_id })
+                user.pages = response.pages;
+                user.pages_processed = 1
+                user.score = this.udb.scorer(user)
+                scoremult[user_id] = 1
+                console.log(`${user_id}: ${user.name}'s score is ${user.score} * ${scoremult[user_id]} = ${user.score * scoremult[user_id]}`) //TODO
+            }).catch(error => {
+                progress.error(user_id, error)
+                user.pages = 0;
+                user.pages_processed = 0
+                scoremult[user_id] = 0
+            }))
+        }
+        //request the next page of user's favorites
+        const getNextPage = (user) => {
+            const user_id = user.nsid
+            resources_remaining -= 1
+            progress.updatePages(1+1)
+            progress.awaitSub(this.api.getUserFavorites(user_id).then(response => {
+                this.idb.add(response, { user_id: user_id })
+                user.pages_processed += 1
+                user.score = this.udb.scorer(user)
+                console.log(`${user_id}: ${user.name}'s score is ${user.score} * ${scoremult[user_id]} = ${user.score * scoremult[user_id]}`) //TODO
+            }).catch(error => {
+                progress.error(user_id, error)
+                user.pages = 0;
+                user.pages_processed = 0
+                scoremult[user_id] = 0
+            }))
+            //bump user's score down by 10% for sorting purposes
+            scoremult[user_id] = scoremult[user_id] * 0.90
+        }
+        //get those initial pages 
+        for (const user of currentUsers) {
+            getInitialPage(user);
+        }
+        //wait until 75% of requests have been processed
+        await progress.waitForProgress(Math.ceil(maxUsers / 4))
+        //main loop
+        while(resources_remaining > 0 && currentUsers.length + userqueue.length > 0) {
+            //remove users with no pages left to query
+            currentUsers = currentUsers.filter(fltr);
+            //fill the working set of users back up from the queue
+            while (currentUsers.length < Math.min(maxUsers * 0.75, resources_remaining / 2) && userqueue.length > 0) {
+                const userToAdd = userqueue.shift();
+                getInitialPage(userToAdd);
+                currentUsers.push(userToAdd);
+                if (resources_remaining <= 0) {
+                    break;
+                }
+            }
+            //wait until 75% of requests have been processed
+            await progress.waitForProgress(Math.ceil(maxUsers / 4))
+            //sort users by modified score
+            currentUsers.sort(cmp)
+            //grab the user at the top of the list
+            const user = currentUsers[0]
+            //grab the next page of faves and bump user's score down by 10% for sorting purposes
+            getNextPage(user);
+        }
+        // Wait for all the api call promises to settle
+        await progress.allSettled();
+        progress.done();
+        console.log({resources_remaining:resources_remaining, maxUsers:maxUsers, sortedUsers:sortedUsers, currentUsers:currentUsers, userqueue:userqueue, scoremult:scoremult, progress:progress}) //TODO
+    }
+
     /**
      * Make sure the specified photos are loaded into idb so you can display them
      * Uses api.getPhotoInfo() (flickr.photos.getInfo)
@@ -222,6 +309,7 @@ export class Progress {
         this.errors = 0;
         this.awaited = [];
         this.awaitedSub = [];
+        this.deferred = [];
     }
 
     /**
@@ -279,6 +367,7 @@ export class Progress {
         this.inputs_processed += 1;
         this.pages_processed += 1;
         this.log(msg)
+        this.checkDeferred()
     }
 
     /**
@@ -288,6 +377,7 @@ export class Progress {
     subUpdate(msg) {
         this.pages_processed += 1;
         this.log(msg)
+        this.checkDeferred()
     }
 
     /**
@@ -302,6 +392,7 @@ export class Progress {
         if (input_id) {
             console.warn(`${input_id} already processed`);
         }
+        this.checkDeferred()
     }
 
     /**
@@ -314,6 +405,7 @@ export class Progress {
         if (input_id) {
             console.error(`Error processing ${input_id}${msg}`);
         }
+        this.checkDeferred()
     }
 
     /**
@@ -357,6 +449,41 @@ export class Progress {
             msg += ` ${prefix} ${this.errors} errors`
         }
         console.log(msg + ".");
+    }
+
+    /**
+     * Defer until the number of queued items left to process are less than the target
+     * @param {number} remaining - number of api calls remaining to defer until 
+     */
+    async waitForProgress(remaining) {
+        //this whole thing is a bit of an ugly hack and I can't decide if I'm proud of it or not
+        //definitely want to revisit it later though
+        var deferred = {
+            promise: null,
+            check: null,
+            resolved: false
+        };
+        deferred.promise = new Promise((resolve) => {
+            deferred.check = () => {
+                if (this.total_pages - (this.pages_processed + this.errors) < remaining) {
+                    deferred.resolved = true; 
+                    resolve()
+                }
+            };
+        });
+        this.deferred.push(deferred)
+
+        await deferred.promise
+    }
+
+    /**
+     * Check which deferred blocking conditions can be released
+     */
+    checkDeferred() {
+        for (const d of this.deferred) {
+            d.check()
+        }
+        this.deferred = this.deferred.filter(d => !d.resolved)
     }
 }
 

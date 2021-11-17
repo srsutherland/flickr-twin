@@ -14,6 +14,7 @@ export class FlickrAPI {
         } else if (window.localStorage["api_key"]) {
             this.setAPIKey(window.localStorage["api_key"]);
         }
+        this.max = 3500;
     }
 
     /**
@@ -24,7 +25,7 @@ export class FlickrAPI {
     toString() {
         if (this.api_key) {
             const calls = this.getNumberOfAPICalls();
-            let returnValue = `"${this.api_key}": Used ${calls}/3500 calls this hour.`;
+            let returnValue = `"${this.api_key}": Used ${calls}/${this.max} calls this hour.`;
             if (calls > 0) {
                 const ms_until_call_expires = this.call_history[0] + 60 * 60 * 1000 - Date.now();
                 const time_formatted = new Date(ms_until_call_expires).toISOString().substr(11, 8);
@@ -66,6 +67,14 @@ export class FlickrAPI {
             this.call_history.shift();
         }
         return this.call_history.length;
+    }
+
+    /**
+     * Returns the number of api calls currently remaining before it hits the resource limit
+     * @returns {number}
+     */
+    getRemainingAPICalls() {
+        return this.max - this.getNumberOfAPICalls()
     }
 
     /**
