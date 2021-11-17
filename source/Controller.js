@@ -29,7 +29,7 @@ export class Controller {
         if (typeof photo_ids === "string") {
             photo_ids = [photo_ids]
         }
-        const progress = new Progress(photo_ids.length).renderWith(this.r);
+        const progress = new Progress().renderWith(this.r);
         for (const photo_id of photo_ids) {
             if (this._processed_images.has(photo_id)) {
                 progress.duplicate(photo_id);
@@ -39,7 +39,6 @@ export class Controller {
             //Load the first page of faves for each image, get total number of pages
             progress.await(this.api.getImageFavorites(photo_id).then((response) => {
                 const pages = response.pages;
-                progress.updatePages(pages)
                 // Load each subpage
                 for (let p = 2; p <= pages; p++) {
                     progress.awaitSub(this.api.getImageFavorites(photo_id, p).then(response => this.udb.add(response)));
@@ -65,7 +64,7 @@ export class Controller {
         if (typeof user_ids === "string") {
             user_ids = [user_ids]
         }
-        const progress = new Progress(user_ids.length).renderWith(this.r);
+        const progress = new Progress().renderWith(this.r);
         for (const user_id of user_ids) {
             progress.await(this.loadUserFavorites(user_id, {progress: progress}))
         }
@@ -85,7 +84,7 @@ export class Controller {
      * @returns {string[]} - array of photo ids that the user has favorited
      */
     async loadUserFavorites(user_id, opts = {}) {
-        const progress = opts.progress || new Progress(1)
+        const progress = opts.progress || new Progress()
         const id_list = [];
         // If "discard" opt is set, change idb to a dummy object that discards the response
         const idb = opts.discard ? {add: () => null} : this.idb;
@@ -101,7 +100,6 @@ export class Controller {
             if (response.pages > 50) {
                 console.warn(`user ${user_id} has more than 50 pages of favorites`)
             }
-            progress.updatePages(pages);
             const handleResponse = (response) => {
                 id_list.push(...response.photo.map(photo=>photo.id))
                 idb.add(response, { user_id: user_id });
@@ -163,7 +161,6 @@ export class Controller {
             scoremult[user_id] = 0
             resources_remaining -= 1
             console.log(`getInitialpage(${user_id})`)
-            progress.updatePages(1+1)
             progress.await(this.api.getUserFavorites(user_id).then(response => {
                 this.idb.add(response, { user_id: user_id })
                 user.pages = response.pages;
@@ -182,7 +179,6 @@ export class Controller {
         const getNextPage = (user) => {
             const user_id = user.nsid
             resources_remaining -= 1
-            progress.updatePages(1+1)
             progress.awaitSub(this.api.getUserFavorites(user_id).then(response => {
                 this.idb.add(response, { user_id: user_id })
                 user.pages_processed += 1
@@ -242,7 +238,7 @@ export class Controller {
         if (typeof photo_ids === "string") {
             photo_ids = [photo_ids]
         }
-        const progress = new Progress(photo_ids.length)
+        const progress = new Progress()
         for (const photo_id of photo_ids) {
             if (!this.idb.has(photo_id)) {
                 progress.await(this.api.getPhotoInfo(photo_id).then(response => {

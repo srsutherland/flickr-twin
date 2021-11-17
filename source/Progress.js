@@ -4,11 +4,10 @@ import { Renderer } from "./Renderer.js"
  * Used to track and display progress of long controller methods
  */
  export class Progress {
-    constructor(total_inputs = 0) {
-        this.number_of_inputs = total_inputs;
-        this.total_inputs = total_inputs;
+    constructor() {
+        this.total_inputs = 0;
         this.inputs_processed = 0;
-        this.total_pages = total_inputs;
+        this.total_pages = 0;
         this.pages_processed = 0;
         this.duplicates = 0;
         this.errors = 0;
@@ -48,19 +47,6 @@ import { Renderer } from "./Renderer.js"
             } else {
                 console.log(this.toString());
             }
-        }
-    }
-
-    /**
-     * Adds to the total number of pages
-     * Called when a request first returns the number of pages of results
-     * @param {*} pages - number of pages
-     */
-    updatePages(pages) {
-        // in some cases, there can be zero pages of results
-        if (pages) {
-            // 1 page is already accounted for 
-            this.total_pages += pages - 1;
         }
     }
 
@@ -118,6 +104,7 @@ import { Renderer } from "./Renderer.js"
      * @param {Promise} promise 
      */
     await(promise, updateMsg) {
+        this.total_inputs += 1
         this.awaited.push(promise)
         promise.then(() => this.update(updateMsg))
     }
@@ -127,6 +114,7 @@ import { Renderer } from "./Renderer.js"
      * @param {Promise} promise 
      */
     awaitSub(promise, updateMsg) {
+        this.total_pages += 1
         this.awaitedSub.push(promise)
         promise.then(() => this.subUpdate(updateMsg))
     }
@@ -145,7 +133,7 @@ import { Renderer } from "./Renderer.js"
      * Log that the task has been completed
      */
     done() {
-        let msg = `Done. Processed ${this.inputs_processed}/${this.number_of_inputs} items over ${this.pages_processed} requests`
+        let msg = `Done. Processed ${this.inputs_processed}/${this.total_inputs} items over ${this.pages_processed} requests`
         if (this.duplicates) {
             msg += ` with ${this.duplicates} duplicates`
         }
