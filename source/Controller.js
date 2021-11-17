@@ -305,7 +305,7 @@ export class Controller {
  * Used to track and display progress of long controller methods
  */
 export class Progress {
-    constructor(total_inputs) {
+    constructor(total_inputs = 0) {
         this.number_of_inputs = total_inputs;
         this.total_inputs = total_inputs;
         this.inputs_processed = 0;
