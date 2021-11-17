@@ -138,7 +138,7 @@ export class Controller {
      * @param {number} starting_from - start from the nth user
      */
     async processUsersFromDB(num = 20, starting_from = 0) {
-        if (this.udb.size == 0) {
+        if (this.udb.size() == 0) {
             this.r.warnMessage("You have to find some twins first!");
             return Promise.reject("UserDatabase was empty")
         }
@@ -147,7 +147,7 @@ export class Controller {
     }
 
     async processUsersFromDBSmart(max_requests = 1000) {
-        if (this.udb.size == 0) {
+        if (this.udb.size() == 0) {
             this.r.warnMessage("You have to find some twins first!");
             return Promise.reject("UserDatabase was empty")
         }
