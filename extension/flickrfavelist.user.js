@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.14
+// @version      2021.11.18
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -702,6 +702,42 @@
         }
     }
 
+    /**
+     * Mode for Flickr photo size pages
+     * @extends FlickrFaveList
+     */
+    class FFLPhotoSizes extends FlickrFaveList {
+        constructor() {
+            super()
+            this.url = window.location.href
+            this.photoID = window.location.href.match(/flickr\.com\/photos\/[^/]+\/(\d+)[/$]/)[1]
+            this.size = window.location.pathname.match(/sizes\/(\w+)[/$]/i)[1]
+            this.addCSS()
+            this.autoSize()
+        }
+
+        autoSize() {
+            if (this.size == 'l' && !window.location.search.match("reallyl")) {
+                const kURL = window.location.href.replace("/l/", "/k/")
+                if (urlExists(kURL)) {
+                    window.location = kURL;
+                }  
+            }
+            const lLink = document.querySelector(`a[href*="/sizes/l"]`)
+            lLink.href = lLink.href + "?reallyl"
+        }
+
+        addCSS() {
+            document.head.insertAdjacentHTML("beforeend",
+                `<style>
+                #main {
+                    width: 98vw;
+                }
+                </style>`
+            )
+        }
+    }
+
     /***  Helper Functions ***/
 
     function downloadObjectAsJson(exportObj, exportName) {
@@ -732,11 +768,13 @@
         let ffl
         if (window.location.href.match("srsutherland.github.io/flickr-twin/") || window.location.href.match(localhosturl)) {
             ffl = new FFLTwinApp()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/)) { //Photo page
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)\/sizes[/$]/i)) { //Photo sizes page
+            ffl = new FFLPhotoSizes()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/i)) { //Photo page
             ffl = new FFLPhotoPage()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/)) { //Photostream
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/i)) { //Photostream
             ffl = new FFLPhotoList()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/)) { //Favorites
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/i)) { //Favorites
             ffl = new FFLPhotoList()
         } else {
             ffl = new FlickrFaveList()
@@ -751,16 +789,17 @@
         const targetNode = document.getElementById('content');
         if (targetNode == undefined) {
             console.warn("Could not find content element")
+        } else {
+            const observerOptions = { childList: true, attributes: true, subtree: false };
+            (new MutationObserver( () => {
+                console.log("observed mutation")
+                if (window.ffl_lasthref !== window.location.href) {
+                    unsafeWindow.ffl.destroy();
+                    delete unsafeWindow.ffl
+                    console.log(`Navigated to ${window.location.href}`)
+                    loadFFL()
+                }
+            })).observe(targetNode, observerOptions);
         }
-        const observerOptions = { childList: true, attributes: true, subtree: false };
-        (new MutationObserver( () => {
-            console.log("observed mutation")
-            if (window.ffl_lasthref !== window.location.href) {
-                unsafeWindow.ffl.destroy();
-                delete unsafeWindow.ffl
-                console.log(`Navigated to ${window.location.href}`)
-                loadFFL()
-            }
-        })).observe(targetNode, observerOptions);
     }
 })();
