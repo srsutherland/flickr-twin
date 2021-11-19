@@ -93,7 +93,7 @@
             for (const k of keys) {
                 exportObj[k] = GM_SuperValue.get(k, [])
             }
-            downloadObjectAsJson(exportObj, "ffl_export-"+new Date().toISOString())
+            downloadObjectAsJson(exportObj, "ffl_export-" + new Date().toLocaleString('sv').replace(/ (\d+):(\d+):\d+/, "-$1$2"))
         }
     
         /**
@@ -344,8 +344,8 @@
             addButton("ffl-paginate-lists", "Paginate lists", () => { this.c.r.displayImages({ids:allCheckedItems()}); })
             addButton("ffl-process-lists", "Process lists", () => { this.c.processPhotos(allCheckedItems()).then(() => this.updateScores()) })
             addButton("ffl-process-twins", "Smart process twins", () => { this.c.processUsersFromDBSmart(); })
-            addButton("ffl-update-lists", "Display user stats", () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
-            addButton("ffl-user-stats", "Update", () => { this.printUserStats(); })
+            addButton("ffl-user-stats", "Display user stats", () => { this.printUserStats(); })
+            addButton("ffl-update-lists", "Update", () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
 
             document.head.insertAdjacentHTML("beforeend", 
             `<style>
@@ -444,14 +444,20 @@
         async sortingMode(categories) {
             const cats = categories || this.categories
             await this.printLists(cats)
-            for (let a of document.getElementsByTagName("a")) {
+            for (const a of document.getElementsByClassName("img-link")) {
+                a.dataset.id = a.getElementsByClassName("img-container")[0].dataset.id
                 a.addEventListener(("click"), function (e) {
                     e.preventDefault();
                     const oldnum = this.dataset.catnum;
-                    const newnum = oldnum != undefined ? (Number(oldnum) + 1) % 5 : 0;
+                    const newnum = oldnum != undefined ? (Number(oldnum) + 1) % categories.length : 0;
                     this.dataset.catnum = newnum
                     this.dataset.catname = cats[newnum]
                 })
+            }
+            this.resize = (size = "b") => {
+                for (const img of document.getElementsByTagName("img")) {
+                    img.src = img.src.replace(/_\w\.jpg/, `_${size}.jpg`)
+                }
             }
             document.head.insertAdjacentHTML("beforeend", 
             `<style>
@@ -462,7 +468,7 @@
                 content: attr(data-catnum)" "attr(data-catname);
                 position: absolute;
                 top: 7px;
-                right: 10px;
+                left: 10px;
                 color: white;
                 font-size: 1.6em;
                 font-weight: bold;
@@ -664,6 +670,7 @@
         }
 
         addCSS() {
+            //TODO change cat opacity
             document.head.insertAdjacentHTML("beforeend",
                 `<style>
                 .ffl-catpill {
