@@ -105,6 +105,7 @@ import { Renderer } from "./Renderer.js"
      */
     await(promise, updateMsg) {
         this.total_inputs += 1
+        this.total_pages += 1
         this.awaited.push(promise)
         promise.then(() => this.update(updateMsg))
     }
