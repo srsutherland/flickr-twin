@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.18
+// @version      2021.11.20
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -230,6 +230,7 @@
                 this.pushPhotoInfo()
             })
             this.createAdvancedPanel()
+            this.createScorers()
         }
 
         destroy() {
@@ -388,9 +389,13 @@
             </style>`)
         }
 
-        async updateScores() {
-            this.awaitController()
-            const userScorer = u => {
+        /**
+         * Generate alternative user scoring methods
+         */
+        createScorers() {
+            this.userScorers = {}
+            this.userScorers.weighted = u => {
+                `weighted`
                 if (!u.pages) {
                     return u.favecount / 10
                 }
@@ -407,7 +412,78 @@
                 }
                 return score / u.pages_processed + u.favecount / (10 * Math.log2(u.pages) + 1)
             }
-            this.c.udb.setScorer(userScorer)
+            Object.defineProperty(this.userScorers.weighted, "name", { value: `weighted` })
+            
+            this.userScorers.redHerring = u => {
+                `redHerring`
+                //This should hypothetically find the images you most want to exclude from searches
+                let normalScore = this.userScorers.weighted(u)
+                normalScore = normalScore < 1 ? 1 : normalScore;
+                let excludeScore = 0;
+                for (const i of this.lists.exclude.map(id => this.c.idb.get(id))) {
+                    if (i?.faved_by.includes(u.nsid)) {
+                        excludeScore += 5
+                    }
+                }
+                return excludeScore / normalScore
+            }
+            Object.defineProperty(this.userScorers.redHerring, "name", { value: `redHerring` })
+
+            this.userScorers.weightedMultiplierFactory = catName => {
+                const userScorer = u => {
+                    `weightedMultiplier${catName}`
+                    if (!u.pages) {
+                        return u.favecount / 10
+                    }
+                    let score = 0;
+                    const multList = this.lists[catName]
+                    const multiplier = this.weights[catName]
+                    for (const cat of this.categories) {
+                        const list = this.lists[cat]
+                        const weight = this.weights[cat]
+                        if (weight == 0) continue;
+                        for (const i of list.map(id => this.c.idb.get(id))) {
+                            if (i?.faved_by.includes(u.nsid)) {
+                                if (multList.includes(i?.id) && catName !== cat) {
+                                    score += weight * multiplier
+                                } else {
+                                    score += weight
+                                }
+                            }
+                        }
+                    }
+                    return score / u.pages_processed + u.favecount / (10 * Math.log2(u.pages) + 1)
+                }
+                this.userScorers[`weightedMultiplier_${catName}`] = userScorer
+                Object.defineProperty(userScorer, "name", { value: `weightedMultiplier_${catName}` })
+                return userScorer;
+            }
+
+            this.userScorers.redHerringFactory = normalScore => {
+                const userScorer = u => {
+                    `redHerring_${normalScore.name}`
+                    //This should hypothetically find the images you most want to exclude from searches
+                    let normalScore = this.userScorers.weighted(u)
+                    normalScore = normalScore < 1 ? 1 : normalScore;
+                    let excludeScore = 0;
+                    for (const i of this.lists.exclude.map(id => this.c.idb.get(id))) {
+                        if (i?.faved_by.includes(u.nsid)) {
+                            excludeScore += 5
+                        }
+                    }
+                    return excludeScore / normalScore
+                }
+                this.userScorers[`redHerring_${normalScore.name}`] = userScorer
+                Object.defineProperty(userScorer, "name", { value: `redHerring_${normalScore.name}` })
+                return userScorer;
+            }
+        }
+
+        async updateScores() {
+            this.awaitController()
+            if (!Object.values(this.userScorers).includes(this.c.udb.scorer)) {
+                this.c.udb.setScorer(this.userScorers.weighted)
+            }
             this.c.udb.calculateScores()
         }
 
