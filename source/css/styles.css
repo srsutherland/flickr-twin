@@ -6,8 +6,14 @@ html, body {
 
 input, textarea, select, button {
     background-color: #1d1d1b;
-    border-color: #736b5e;
+    border-color: #565046;
     color: #e8e6e3;
+}
+
+input:disabled, textarea:disabled, select:disabled, button:disabled {
+    background-color: #32312f;
+    border-color: #524c43;
+    color: #8d8983;
 }
 
 button:not(:first-child) {
