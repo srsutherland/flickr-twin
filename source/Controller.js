@@ -159,8 +159,8 @@ export class Controller {
         const scoremult = {}
         const progress = new Progress().renderWith(this.r)
         console.log({resources_remaining:resources_remaining, maxUsers:maxUsers, sortedUsers:sortedUsers, currentUsers:currentUsers, userqueue:userqueue, scoremult:scoremult, progress:progress}) //TODO
-        const cmp = (a, b) => b.score * scoremult[b.nsid] - a.score * scoremult[a.nsid];
-        const fltr = user => user.pages !== undefined && user.pages > user.pages_processed;
+        const compareScores = (a, b) => b.score * scoremult[b.nsid] - a.score * scoremult[a.nsid];
+        const notExhausted = user => user.pages !== undefined && user.pages > user.pages_processed;
         //request the initial page for user when first processed
         const getInitialPage = (user) => {
             const user_id = user.nsid
@@ -200,6 +200,9 @@ export class Controller {
             }))
             //bump user's score down by 10% for sorting purposes
             scoremult[user_id] = scoremult[user_id] * 0.90
+            if (!notExhausted(user)) {
+                scoremult[user_id] = 0;
+            }
         }
         // // logic // //
         //get those initial pages 
@@ -212,7 +215,7 @@ export class Controller {
         //main loop
         while(resources_remaining > 0 && currentUsers.length + userqueue.length > 0) {
             //remove users with no pages left to query
-            currentUsers = currentUsers.filter(fltr);
+            currentUsers = currentUsers.filter(notExhausted);
             //fill the working set of users back up from the queue
             while (currentUsers.length < Math.min(maxUsers * 0.75, resources_remaining / 2) && userqueue.length > 0) {
                 const userToAdd = userqueue.shift();
@@ -225,9 +228,12 @@ export class Controller {
             //wait until 75% of requests have been processed
             await progress.waitForProgress(Math.ceil(maxUsers / 4))
             //sort users by modified score
-            currentUsers.sort(cmp)
+            currentUsers.sort(compareScores)
             //grab the user at the top of the list
             const user = currentUsers[0]
+            if (!(notExhausted(user))){
+                break; //need to go to filter step early
+            }
             //grab the next page of faves and bump user's score down by 10% for sorting purposes
             getNextPage(user);
         }
