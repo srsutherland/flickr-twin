@@ -173,6 +173,8 @@ export class Controller {
                 this.idb.add(response, { user_id: user_id })
                 user.pages = response.pages;
                 user.pages_processed = 1
+                user.faves_processed = response.photo?.length || 0
+                user.faves_total = response.total
                 user.score = this.udb.scorer(user)
                 scoremult[user_id] = 1
                 console.log(`${user_id}: ${user.name}'s score is ${user.score} * ${scoremult[user_id]} = ${user.score * scoremult[user_id]}`) //TODO
@@ -180,6 +182,8 @@ export class Controller {
                 progress.error(user_id, error)
                 user.pages = 0;
                 user.pages_processed = 0
+                user.faves_processed = 0
+                user.total = 0
                 scoremult[user_id] = 0
             }))
         }
@@ -190,6 +194,7 @@ export class Controller {
             progress.awaitSub(this.api.getUserFavorites(user_id).then(response => {
                 this.idb.add(response, { user_id: user_id })
                 user.pages_processed += 1
+                user.faves_processed += response.photo?.length || 0
                 user.score = this.udb.scorer(user)
                 console.log(`${user_id}: ${user.name}'s score is ${user.score} * ${scoremult[user_id]} = ${user.score * scoremult[user_id]}`) //TODO
             }).catch(error => {
