@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.20
+// @version      2021.11.21
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -566,15 +566,18 @@
             for (const cat of categories) {
                 newHTML += (`<th> ${cat.replace(/_/g, '_<wbr/>')} </th>`)
             }
-            newHTML += (`<th>total pages</th><th>score</th>`)
+            newHTML += (`<th>pages processed</th><th>total pages</th><th>faves processed</th><th>total faves</th><th>score</th>`)
             for (const u of this.c.udb.sortedList(num)) {
                 newHTML += (`<tr><td>${this.c.r.userHTML(u)}</td>`)
                 for (const cat of this.categories) {
                     const ls = this.lists[cat]
-                    newHTML += (`<td>${ls.map(id => this.c.idb.get(id)).filter(i => i?.faved_by.includes(u.nsid)).length}</td>`)
+                    newHTML += (`<td title="${cat}">${ls.map(id => this.c.idb.get(id)).filter(i => i?.faved_by.includes(u.nsid)).length}</td>`)
                 }
-                newHTML += (`<td>${u.pages || "?"}</td>`)
-                newHTML += (`<td>${u.score}</td>`)
+                newHTML += (`<td title="pages processed">${u.pages_processed || "?"}</td>`)
+                newHTML += (`<td title="total pages">${u.pages || "?"}</td>`)
+                newHTML += (`<td title="faves processed">${u.faves_processed || "?"}</td>`)
+                newHTML += (`<td title="total faves">${u.faves_total || "?"}</td>`)
+                newHTML += (`<td title="score">${u.score}</td>`)
                 newHTML += (`</tr>`)
             }
             this.c.r.appendHTML(newHTML + `</table>`)
