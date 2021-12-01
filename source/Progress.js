@@ -96,6 +96,7 @@ import { Renderer } from "./Renderer.js"
         if (input_id) {
             console.error(`Error processing ${input_id}${msg}`);
         }
+        this.log()
         this.checkDeferred()
     }
 
