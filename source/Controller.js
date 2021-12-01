@@ -47,6 +47,7 @@ export class Controller {
             }).catch(error => {
                 this._processed_images.delete(photo_id)
                 progress.error(photo_id, error)
+                return Promise.reject()
             }));
         }
         progress.log()
@@ -114,6 +115,7 @@ export class Controller {
             handleResponse(response)
         }).catch(error => {
             progress.error(user_id, error)
+            return Promise.reject()
         })
         if (!opts.progress) {
             progress.done()
@@ -185,6 +187,7 @@ export class Controller {
                 user.faves_processed = 0
                 user.total = 0
                 scoremult[user_id] = 0
+                return Promise.reject()
             }))
         }
         //request the next page of user's favorites
@@ -202,6 +205,7 @@ export class Controller {
                 user.pages = 0;
                 user.pages_processed = 0
                 scoremult[user_id] = 0
+                return Promise.reject()
             }))
             //bump user's score down by 10% for sorting purposes
             scoremult[user_id] = scoremult[user_id] * 0.90
@@ -264,7 +268,9 @@ export class Controller {
                     this.idb.add(response)
                 }).catch(error => {
                     progress.error(photo_id, error)
-                }))
+                    return Promise.reject()
+                })
+            )
             } else {
                 progress.duplicate()
             }
