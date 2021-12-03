@@ -239,7 +239,7 @@ export class Controller {
             //grab the user at the top of the list
             const user = currentUsers[0]
             if (!(notExhausted(user))){
-                break; //need to go to filter step early
+                continue; //need to go to filter step early
             }
             //grab the next page of faves and bump user's score down by 10% for sorting purposes
             getNextPage(user);
