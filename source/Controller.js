@@ -160,13 +160,13 @@ export class Controller {
         const progress = new Progress().renderWith(this.r)
         console.log({resources_remaining:resources_remaining, maxUsers:maxUsers, sortedUsers:sortedUsers, currentUsers:currentUsers, userqueue:userqueue, scoremult:scoremult, progress:progress}) //TODO
         const compareScores = (a, b) => b.score * scoremult[b.nsid] - a.score * scoremult[a.nsid];
-        const notExhausted = user => user.pages !== undefined && user.pages > user.pages_processing;
+        const notExhausted = user => user.pages !== undefined && user.pages > user.current_page;
         //request the initial page for user when first processed
         const getInitialPage = (user) => {
             const user_id = user.nsid
             user.pages = undefined;
             user.pages_processed = undefined;
-            user.pages_processing = 1
+            user.current_page = 1
             scoremult[user_id] = 0
             resources_remaining -= 1
             console.log(`getInitialpage(${user_id})`)
@@ -192,8 +192,8 @@ export class Controller {
         const getNextPage = (user) => {
             const user_id = user.nsid
             resources_remaining -= 1
-            user.pages_processing += 1
-            progress.awaitSub(this.api.getUserFavorites(user_id).then(response => {
+            user.current_page += 1
+            progress.awaitSub(this.api.getUserFavorites(user_id, user.current_page).then(response => {
                 this.idb.add(response, { user_id: user_id })
                 user.pages_processed += 1
                 user.faves_processed += response.photo?.length || 0
