@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.11.21
+// @version      2021.12.01
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -742,6 +742,7 @@
                             `<div class="ffl-catpill ffl-catpill-${c.category}"><span class="ffl-catpillname">${c.category}</span></div>`
                         )
                         parent.classList.add(`ffl-cat-${c.category}`)
+                        parent.classList.add(`ffl-categorized`)
                     }
                 }
             }
@@ -770,10 +771,16 @@
                 .ffl-catpillname {
                     display: none;
                 }
-                .ffl-cat-exclude, .ffl-cat-hide {
+                .ffl-categorized {
+                    opacity: 50%;
+                }
+                .ffl-cat-hidden, .ffl-cat-hide {
                     opacity: 30%;
                 }
-                .ffl-cat-exclude:hover, .ffl-cat-hide:hover {
+                .ffl-cat-exclude {
+                    opacity: 15%;
+                }
+                .ffl-categorized:hover {
                     opacity: 100%;
                 }
                 </style>`
