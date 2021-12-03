@@ -44,11 +44,10 @@ export class Controller {
                     progress.awaitSub(this.api.getImageFavorites(photo_id, p).then(response => this.udb.add(response)));
                 }
                 this.udb.add(response);
-            }).catch(error => {
+            })).catch(error => {
                 this._processed_images.delete(photo_id)
                 progress.error(photo_id, error)
-                return Promise.reject()
-            }));
+            });
         }
         progress.log()
         // Wait for all the api call promises to settle
@@ -115,7 +114,6 @@ export class Controller {
             handleResponse(response)
         }).catch(error => {
             progress.error(user_id, error)
-            return Promise.reject()
         })
         if (!opts.progress) {
             progress.done()
@@ -162,12 +160,13 @@ export class Controller {
         const progress = new Progress().renderWith(this.r)
         console.log({resources_remaining:resources_remaining, maxUsers:maxUsers, sortedUsers:sortedUsers, currentUsers:currentUsers, userqueue:userqueue, scoremult:scoremult, progress:progress}) //TODO
         const compareScores = (a, b) => b.score * scoremult[b.nsid] - a.score * scoremult[a.nsid];
-        const notExhausted = user => user.pages !== undefined && user.pages > user.pages_processed;
+        const notExhausted = user => user.pages !== undefined && user.pages > user.pages_processing;
         //request the initial page for user when first processed
         const getInitialPage = (user) => {
             const user_id = user.nsid
             user.pages = undefined;
             user.pages_processed = undefined;
+            user.pages_processing = 1
             scoremult[user_id] = 0
             resources_remaining -= 1
             console.log(`getInitialpage(${user_id})`)
@@ -180,33 +179,32 @@ export class Controller {
                 user.score = this.udb.scorer(user)
                 scoremult[user_id] = 1
                 console.log(`${user_id}: ${user.name}'s score is ${user.score} * ${scoremult[user_id]} = ${user.score * scoremult[user_id]}`) //TODO
-            }).catch(error => {
+            })).catch(error => {
                 progress.error(user_id, error)
                 user.pages = 0;
                 user.pages_processed = 0
                 user.faves_processed = 0
                 user.total = 0
                 scoremult[user_id] = 0
-                return Promise.reject()
-            }))
+            })
         }
         //request the next page of user's favorites
         const getNextPage = (user) => {
             const user_id = user.nsid
             resources_remaining -= 1
+            user.pages_processing += 1
             progress.awaitSub(this.api.getUserFavorites(user_id).then(response => {
                 this.idb.add(response, { user_id: user_id })
                 user.pages_processed += 1
                 user.faves_processed += response.photo?.length || 0
                 user.score = this.udb.scorer(user)
                 console.log(`${user_id}: ${user.name}'s score is ${user.score} * ${scoremult[user_id]} = ${user.score * scoremult[user_id]}`) //TODO
-            }).catch(error => {
+            })).catch(error => {
                 progress.error(user_id, error)
                 user.pages = 0;
                 user.pages_processed = 0
                 scoremult[user_id] = 0
-                return Promise.reject()
-            }))
+            })
             //bump user's score down by 10% for sorting purposes
             scoremult[user_id] = scoremult[user_id] * 0.90
             if (!notExhausted(user)) {
@@ -266,11 +264,9 @@ export class Controller {
             if (!this.idb.has(photo_id)) {
                 progress.await(this.api.getPhotoInfo(photo_id).then(response => {
                     this.idb.add(response)
-                }).catch(error => {
+                })).catch(error => {
                     progress.error(photo_id, error)
-                    return Promise.reject()
                 })
-            )
             } else {
                 progress.duplicate()
             }

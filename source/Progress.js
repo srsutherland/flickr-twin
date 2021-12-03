@@ -108,7 +108,7 @@ import { Renderer } from "./Renderer.js"
         this.total_inputs += 1
         this.total_pages += 1
         this.awaited.push(promise)
-        promise.then(() => this.update(updateMsg))
+        return promise.then(() => this.update(updateMsg))
     }
 
     /**
@@ -118,7 +118,7 @@ import { Renderer } from "./Renderer.js"
     awaitSub(promise, updateMsg) {
         this.total_pages += 1
         this.awaitedSub.push(promise)
-        promise.then(() => this.subUpdate(updateMsg))
+        return promise.then(() => this.subUpdate(updateMsg))
     }
 
     /**
