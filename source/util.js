@@ -1,5 +1,10 @@
 /**@file utility functions */
 
+/**
+ * Automatically saved the object passed in as a .json file
+ * @param {Object} exportObj 
+ * @param {string} exportName - Name to save as
+ */
 // eslint-disable-next-line no-unused-vars
 function downloadObjectAsJson(exportObj, exportName) {
     var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
@@ -9,6 +14,25 @@ function downloadObjectAsJson(exportObj, exportName) {
     document.body.appendChild(downloadAnchorNode); // required for firefox
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
+}
+
+/**
+ * Opens the filepicker to select a file which is then parsed as JSON
+ * @returns {Promise<object>} - A promise containing an the parsed JSON object
+ */
+// eslint-disable-next-line no-unused-vars
+async function getJsonUpload () {
+    const inputFileElement = document.createElement('input')
+    inputFileElement.setAttribute('type', 'file')
+    inputFileElement.setAttribute('accept', '.json')
+    const event = new Promise(resolve => {
+        inputFileElement.addEventListener('change', resolve, false)
+    })
+    inputFileElement.click()
+    const { files } = (await event).target
+    if (!files) { return }
+    const fileText = await files[0].text()
+    return JSON.parse(fileText)
 }
 
 /**
