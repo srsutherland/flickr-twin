@@ -153,7 +153,7 @@ export class Controller {
         }
         let resources_remaining = Math.min(this.api.getRemainingAPICalls(), max_requests)
         const maxUsers = Math.min(Math.floor(resources_remaining/5), 100)
-        const sortedUsers = this.udb.sortedList(Math.min(resources_remaining, 1000))
+        const sortedUsers = this.udb.sortedList(resources_remaining)
         let currentUsers = sortedUsers.slice(0, maxUsers)
         const userqueue = sortedUsers.slice(maxUsers)
         const scoremult = {}
