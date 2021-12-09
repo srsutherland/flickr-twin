@@ -317,6 +317,8 @@
             this.getChecked = getChecked
             const allCheckedItems = () => [].concat(...(getChecked().map(cat => this.lists[cat])))
             this.allCheckedItems = allCheckedItems
+            const allCheckedItemsNo404 = () => allCheckedItems().filter(i => this.lists.e404 ? this.lists.e404.includes(i) : true)
+            this.allCheckedItemsNo404 = allCheckedItemsNo404
 
             // Category weights
             ap.insertAdjacentHTML("beforeend", `<form id="ffl-weights"></form>`)
@@ -343,7 +345,7 @@
             }
             addButton("ffl-display-lists", "Display lists", () => { this.printLists(getChecked()) })
             addButton("ffl-paginate-lists", "Paginate lists", () => { this.c.r.displayImages({ids:allCheckedItems()}); })
-            addButton("ffl-process-lists", "Process lists", () => { this.c.processPhotos(allCheckedItems()).then(() => this.updateScores()) })
+            addButton("ffl-process-lists", "Process lists", () => { this.c.processPhotos(allCheckedItemsNo404()).then(() => this.updateScores()) })
             addButton("ffl-process-twins", "Smart process twins", () => { this.c.processUsersFromDBSmart(); })
             addButton("ffl-user-stats", "Display user stats", () => { this.printUserStats(); })
             addButton("ffl-update-lists", "Update", () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
