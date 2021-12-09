@@ -94,7 +94,7 @@ import { Renderer } from "./Renderer.js"
     error(input_id, msg = "") {
         this.errors += 1
         if (input_id) {
-            console.error(`Error processing ${input_id}${msg}`);
+            console.error(`Error processing ${input_id}; ${msg}`);
         }
         this.log()
         this.checkDeferred()
