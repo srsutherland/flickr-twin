@@ -62,7 +62,8 @@ Set.prototype.add = function () {
 }
 
 /**
- * Copy Object.keys() and Object.values() to prototype for convenience when playing with data
+ * Copy Object.keys(), Object.values(), and Object.entries() to prototype 
+ * for convenience when playing with data
  */
 Object.prototype.keys = function () {
     console.warn("Use Object.keys(*) instead")
@@ -72,4 +73,9 @@ Object.prototype.keys = function () {
 Object.prototype.values = function () {
     console.warn("Use Object.values(*) instead")
     return Object.values(this);
+};
+
+Object.prototype.entries = function () {
+    console.warn("Use Object.entries(*) instead")
+    return Object.entries(this);
 };
