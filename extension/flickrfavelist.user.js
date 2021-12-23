@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.12.03
+// @version      2021.12.22
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -802,6 +802,7 @@
             this.size = window.location.pathname.match(/sizes\/(\w+)[/$]/i)[1]
             this.addCSS()
             this.autoSize()
+            this.changeAuthorLink()
         }
 
         async autoSize() {
@@ -811,12 +812,25 @@
                 if (response.ok && response.url.match("/sizes/k")) {
                     window.location = kURL;
                 } else {
-                    console.log("no k size")
+                    console.log("no k size, trying h")
+                    const hURL = window.location.href.replace("/l/", "/h/")
+                    response = await fetch(hURL)
+                    if (response.ok && response.url.match("/sizes/h")) {
+                        window.location = hURL;
+                    } else {
+                        console.log("no h size")
+                    }
                 }
             } else {
                 const lLink = document.querySelector(`a[href*="/sizes/l"]`)
                 lLink.href = lLink.href + "?reallyl"
             }
+            this.changeAuthorLink()
+        }
+
+        changeAuthorLink() {
+            const authorlink = document.getElementById("all-sizes-header").children[0].getElementsByTagName("a")[0]
+            authorlink.href = authorlink.href.replace("photos", "people")
         }
 
         addCSS() {
