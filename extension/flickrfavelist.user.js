@@ -806,24 +806,28 @@
         }
 
         async autoSize() {
-            if (this.size == 'l' && !window.location.search.match("reallyl")) {
-                const kURL = window.location.href.replace("/l/", "/k/")
-                let response = await fetch(kURL)
-                if (response.ok && response.url.match("/sizes/k")) {
-                    window.location = kURL;
+            const resize = async (newSize) => {
+                const newURL = window.location.href.replace(`/${this.size}/`, `/${newSize}/`)
+                let response = await fetch(newURL)
+                if (response.ok && response.url.match(`/sizes/${newSize}`)) {
+                    window.location.replace(newURL);
                 } else {
-                    console.log("no k size, trying h")
-                    const hURL = window.location.href.replace("/l/", "/h/")
-                    response = await fetch(hURL)
-                    if (response.ok && response.url.match("/sizes/h")) {
-                        window.location = hURL;
-                    } else {
-                        console.log("no h size")
-                    }
+                    return Promise.reject(`no ${newSize} size`)
                 }
+            }
+            const reallyLink = (size) => {
+                const link = document.querySelector(`a[href*="/sizes/${size}"]`)
+                if (link != undefined) {
+                    link.href = link.href + `?really${size}`
+                }
+            } 
+            if (this.size == 'l' && !window.location.search.match("reallyl")) {
+                await resize("k").catch(e => { console.log(e); resize("h") }).catch(console.log)
+            } if (this.size == 'z' && !window.location.search.match("reallyz")) {
+                await resize("c").catch(console.log)
             } else {
-                const lLink = document.querySelector(`a[href*="/sizes/l"]`)
-                lLink.href = lLink.href + "?reallyl"
+                reallyLink("z")
+                reallyLink("l")
             }
             this.changeAuthorLink()
         }
