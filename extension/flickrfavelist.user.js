@@ -64,6 +64,13 @@
         }
 
         /**
+         * Display a toast message
+         */
+        toast(msg) {
+            iqwerty.toast.toast(msg)
+        }
+
+        /**
          * Update a category from local storage
          * @param {string} category 
          * @returns {Array} - The updated list
