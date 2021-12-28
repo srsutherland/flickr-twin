@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.12.22
+// @version      2021.12.26
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -324,7 +324,7 @@
             this.getChecked = getChecked
             const allCheckedItems = () => [].concat(...(getChecked().map(cat => this.lists[cat])))
             this.allCheckedItems = allCheckedItems
-            const allCheckedItemsNo404 = () => allCheckedItems().filter(i => this.lists.e404 ? this.lists.e404.includes(i) : true)
+            const allCheckedItemsNo404 = () => allCheckedItems().filter(i => this.lists.e404 ? !this.lists.e404.includes(i) : true)
             this.allCheckedItemsNo404 = allCheckedItemsNo404
 
             // Category weights
