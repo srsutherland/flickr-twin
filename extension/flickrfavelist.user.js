@@ -235,6 +235,10 @@
             this.awaitController().then(() => {
                 this.hideAll()
                 this.pushPhotoInfo()
+                window.onbeforeunload = function() {
+                    // Confirm before navigating away if dbs not empty
+                    if (this.c.udb.size() > 0 || this.c.idb.size() > 0) return "";
+                }
             })
             this.createAdvancedPanel()
             this.createScorers()
