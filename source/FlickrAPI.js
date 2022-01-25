@@ -25,11 +25,11 @@ export class FlickrAPI {
     toString() {
         if (this.api_key) {
             const calls = this.getNumberOfAPICalls();
-            let returnValue = `"${this.api_key}": Used ${calls}/${this.max} calls this hour.`;
+            let returnValue = `"${this.api_key}": Used ${calls}/${this.max} calls this hour`;
             if (calls > 0) {
                 const ms_until_call_expires = this.call_history[0] + 60 * 60 * 1000 - Date.now();
                 const time_formatted = new Date(ms_until_call_expires).toISOString().substr(11, 8);
-                returnValue += ` Oldest call expires in ${time_formatted}`;
+                returnValue += `. Oldest call expires in ${time_formatted}`;
             }
             return returnValue;
         } else {

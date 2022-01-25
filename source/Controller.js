@@ -1,7 +1,9 @@
 import { UserDatabase, ImageDatabase } from "./FavesDatabase.js";
 import { FlickrAPI } from "./FlickrAPI.js"
+//import { FlickrAPIQueue } from "./FlickrAPIQueue"
 import { Renderer } from "./Renderer.js"
 import { Progress } from "./Progress.js"
+import { FlickrAPIQueue } from "./FlickrAPIQueue.js";
 
 /**
  * Controller Object. Handles main control flow and instantiates + directs the other objects
@@ -316,6 +318,14 @@ export class Controller {
      */
     isHidden(id) {
         return this._processed_images.has(id) || this._excluded.has(id) || this._hidden.has(id)
+    }
+
+    makeAPIQueued() {
+        if (!(this.api instanceof FlickrAPIQueue)) {
+            this.api = new FlickrAPIQueue(this.api);
+        } else {
+            console.warn("this.api is already a FlickrAPIQueue")
+        }
     }
 }
 
