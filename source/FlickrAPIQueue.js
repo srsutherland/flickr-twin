@@ -54,7 +54,7 @@ import { FlickrAPI } from "./FlickrAPI.js"
             if (calls < this.max) {
                 this.waitingForLimit = false;
                 this.waitingForTimer = Date.now()
-                window.setTimeout(() => this.updateQueue(true), 10)
+                window.setTimeout(() => this.updateQueue(true), 100)
                 this.queue.shift().resolve()
             } else {
                 this.waitingForLimit = Date.now()
