@@ -239,6 +239,7 @@
                     // Confirm before navigating away if dbs not empty
                     if (this.c.udb.size() > 0 || this.c.idb.size() > 0) return "";
                 }
+                this.c.makeAPIQueued();
             })
             this.createAdvancedPanel()
             this.createScorers()
