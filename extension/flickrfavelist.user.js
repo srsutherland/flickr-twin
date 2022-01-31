@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2021.12.26
+// @version      2022.01.30
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -897,6 +897,8 @@
         } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/i)) { //Photostream
             ffl = new FFLPhotoList()
         } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/i)) { //Favorites
+            ffl = new FFLPhotoList()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/albums\/\d+/i)) { //Album
             ffl = new FFLPhotoList()
         } else if (window.location.href.match(/flickr\.com\/people\/([^/]+)[$/]/i)) { //About page
             ffl = new FFLPhotoList()
