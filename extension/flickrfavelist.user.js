@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2022.01.30
+// @version      2022.04.08
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -196,7 +196,7 @@
         /**
          * Get the stored data for a given image id
          * @param {string} id - image id
-         * @param {boolean} log - if truthy, log the info to the console
+         * @param {boolean} logInfo - if truthy, log the info to the console
          * @returns {Object} - object containing categories and source url for a given image, if any
          */
         lookup(id, logInfo) {
@@ -218,6 +218,20 @@
                 log(`"${id}" not found`)
             }
             return rvalue;
+        }
+
+        /**
+         * Check whether the image is categorized in at least one list
+         * @param {string} id - image id 
+         * @returns {boolean}
+         */
+        includes(id) {
+            for (const list of Object.values(this.lists)) {
+                if (list.includes(id)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -502,6 +516,42 @@
         }
 
         /**
+         * Add all visible, uncategorized images on the page to a category
+         * @param {string} cat - category to add images to
+         */
+         categorizeAllVisible(cat) {
+            if (!Object.keys(this.lists).includes(cat)) {
+                throw new TypeError(`No category "${cat}" in lists`)
+            }
+            this.updateAll();
+            //get visible ids from renderer's "displaying" object
+            const ids = this.c.r.displaying.images_onscreen.map(i => i.id)
+            let numAdded = 0;
+            for (const id of ids) {
+                if (!this.includes(id)) {
+                    this.addItem(cat, id);
+                    numAdded++;
+                } 
+            }
+            const page = this.c.r.displaying.page;
+            console.log(`Added ${numAdded} of ${ids.length} images on page ${page} to "${cat}" `)
+        }
+
+        /**
+         * Add all visible, uncategorized images on the page to the "hidden" category
+         */
+        hideAllVisible() {
+            this.categorizeAllVisible("hidden")
+        }
+
+        /**
+         * Add all visible, uncategorized images on the page to the "exclude" category
+         */
+        excludeAllVisible() {
+            this.categorizeAllVisible("exclude")
+        }
+
+        /**
          * Tell the FTF app to display the image in the given categories
          * Each category gets a header and a different-hued indent border
          * @param {Array<string>} categories 
@@ -596,6 +646,21 @@
             }
             this.c.r.appendHTML(newHTML + `</table>`)
         }
+
+        /**
+         * Performs a full FFL routine in order:
+         * 1. Process all checked lists
+         * 2. Process all users, smartly, up to a max num of requests
+         * 3. Display the images
+         * @param {number} maxUserpageRequests - maximum userpage request to make when processing users
+         */
+        async fullRoutine(maxUserpageRequests=3000) {
+            await this.c.processPhotos(this.allCheckedItemsNo404())
+            await this.updateScores()
+            this.c.api.getRemainingAPICalls = () => maxUserpageRequests
+            await this.c.processUsersFromDBSmart(maxUserpageRequests);
+            await this.c.r.displayImages();
+        } 
     }
 
     /**
@@ -763,6 +828,82 @@
             this.catPillsEvent.adding = false;
         }
 
+        /**
+         * Add all visible, uncategorized images on the page to a category
+         * @param {string} cat - category to add images to
+         */
+        categorizeAllVisible(cat) {
+            if (!Object.keys(this.lists).includes(cat)) {
+                throw new TypeError(`No category "${cat}" in lists`)
+            }
+            this.updateAll();
+            //get visible ids from overlay
+            const ids = [...document.querySelectorAll(`a.overlay`)].map(a => a.href.match(/\/(\d+)\//)[1])
+            let numAdded = 0;
+            for (const id of ids) {
+                if (!this.includes(id)) {
+                    this.addItem(cat, id);
+                    numAdded++;
+                } 
+            }
+            const page = this.url.match(/\/page(\d+)/) ? this.url.match(/\/page(\d+)/)[1] : 1
+            console.log(`Added ${numAdded} of ${ids.length} images on page ${page} to "${cat}" `)
+        }
+
+        /**
+         * Add all visible, uncategorized images on the page to the "hidden" category
+         */
+        hideAllVisible() {
+            this.categorizeAllVisible("hidden")
+        }
+
+        /**
+         * Add all visible, uncategorized images on the page to the "exclude" category
+         */
+        excludeAllVisible() {
+            this.categorizeAllVisible("exclude")
+        }
+
+        /**
+         * Make middle clicking an image add it to a category if not already categorized
+         * @param {string} cat - category to add images to
+         */
+        middleClickCategorizeMode(cat) {
+            this.updateAll();
+            const categorizeImage = id => { 
+                if (!this.includes(id)) {
+                    this.addItem(cat, id)
+                    console.log(`${id} added to ${cat}`) 
+                } else {
+                    console.warn(`${id} already categorized`)
+                }
+            }
+            var links = [...document.querySelectorAll(`a.overlay`)]
+            for (const a of links) {
+                a.addEventListener("auxclick", e => {
+                    if (e.button != 1) return;
+                    e.preventDefault();
+                    const id = e.target.href.match(/\/(\d+)\//)?.[1];
+                    categorizeImage(id);
+                    e.target.parentElement.parentElement.parentElement.classList.add(`ffl-cat-${cat}`);
+                })
+            }
+        }
+
+        /**
+         * Make middle clicking an image add it to the "hidden" category if not already categorized
+         */
+        middleClickHideMode() {
+            this.middleClickCategorizeMode("hidden");
+        }
+
+        /**
+         * Make middle clicking an image add it to the "exclude" category if not already categorized
+         */
+        middleClickExcludeMode() {
+            this.middleClickCategorizeMode("exclude");
+        }
+
         addCSS() {
             //TODO change cat opacity
             document.head.insertAdjacentHTML("beforeend",
@@ -854,6 +995,9 @@
                 `<style>
                 #main {
                     width: 98vw;
+                }
+                .spaceball {
+                    display: none !important
                 }
                 </style>`
             )
