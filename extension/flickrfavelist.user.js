@@ -113,6 +113,13 @@
             }
         }
 
+        /**
+         * Import extension setting from JSON file
+         */
+         importFromFile() {
+            getJsonUpload().then(j => this.import(j));
+        }
+
         retrieve(GM_key) {
             if (GM_key != undefined) {
                 return GM_SuperValue.get(GM_key, undefined)
@@ -1016,6 +1023,25 @@
         downloadAnchorNode.remove();
     }
     unsafeWindow.downloadObjectAsJson = downloadObjectAsJson;
+
+    /**
+     * Opens the filepicker to select a file which is then parsed as JSON
+     * @returns {Promise<object>} - A promise containing an the parsed JSON object
+     */
+    async function getJsonUpload () {
+        const inputFileElement = document.createElement('input')
+        inputFileElement.setAttribute('type', 'file')
+        inputFileElement.setAttribute('accept', '.json')
+        const event = new Promise(resolve => {
+            inputFileElement.addEventListener('change', resolve, false)
+        })
+        inputFileElement.click()
+        const { files } = (await event).target
+        if (!files) { return }
+        const fileText = await files[0].text()
+        return JSON.parse(fileText)
+    }
+    unsafeWindow.getJsonUpload = getJsonUpload;
 
     async function urlExists(url) {
         const response = await fetch(url, { method: 'head' })
