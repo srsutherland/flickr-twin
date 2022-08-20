@@ -1008,6 +1008,8 @@
                 }
                 </style>`
             )
+            //display: none doesn't seem to help, so:
+            document.querySelectorAll(".spaceball").forEach(spaceball => spaceball.remove())
         }
     }
 
