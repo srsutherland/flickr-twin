@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2022.08.08
+// @version      2022.08.21
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -11,7 +11,7 @@
 // @grant        GM_listValues
 // @require      http://userscripts-mirror.org/scripts/source/107941.user.js
 // @require      https://greasyfork.org/scripts/408787-js-toast/code/js-toast.js?version=837479
-// ==/UserScript==6
+// ==/UserScript==
 
 (function() {
     'use strict';
@@ -253,13 +253,18 @@
             for (const cat of this.categories) {
                 this.weights[cat] = this.weights[cat] || 1
             }
+            this.storedPhotoDBLength = 0;
             this.awaitController().then(() => {
-                this.hideAll()
-                this.pushPhotoInfo()
-                window.onbeforeunload = function() {
+                this.hideAll();
+                this.pushPhotoInfo();
+                window.addEventListener('beforeunload', (event) => {
                     // Confirm before navigating away if dbs not empty
-                    if (this.c.udb.size() > 0 || this.c.idb.size() > 0) return "";
-                }
+                    if (this.c.udb.size() > 0 || this.c.idb.size() > this.storedPhotoDBLength) {
+                        event.preventDefault();
+                        // Chrome requires returnValue to be set.
+                        event.returnValue = '';
+                    }
+                });
                 this.c.makeAPIQueued();
             })
             this.createAdvancedPanel()
@@ -300,7 +305,7 @@
         }
 
         /**
-         * Push stored photo info (used to display images without another apit request) to the FTF app
+         * Push stored photo info (used to display images without another api request) to the FTF app
          */
         async pushPhotoInfo() {
             await this.awaitController()
@@ -308,6 +313,7 @@
             for (const photo of db) {
                 this.c.idb.addPhoto(photo)
             }
+            this.storedPhotoDBLength = db.length;
             iqwerty.toast.toast('Photo info synced from extension')
         }
 
