@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2022.08.21
+// @version      2022.08.28
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -921,6 +921,10 @@
             //TODO change cat opacity
             document.head.insertAdjacentHTML("beforeend",
                 `<style>
+                .ffl-catpill-contain {
+                    position: absolute;
+                    top: 5px;
+                }
                 .ffl-catpill {
                     background: red;
                     border: 3px solid blue;
