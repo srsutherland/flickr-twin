@@ -89,6 +89,19 @@ export class Renderer {
             page: 1,
             per_page: 20
         };
+        // Guess input if opts is an array
+        if (Array.isArray(opts)) {
+            const inputArray = opts
+            if (inputArray.every(i => typeof i === 'string')) {
+                opts = {ids: inputArray};
+                console.warn("Assuming input is array of ids; Use displayImages({ids: arry}) instead");
+            } else if (inputArray.every(i => typeof i === 'object' && i.id != undefined)) {
+                opts = {images: inputArray};
+                console.warn("Assuming input is array of images; Use displayImages({images: arry}) instead");
+            } else {
+                throw new TypeError("Unknown list type passed to displayImages()");
+            }
+        }
         // Merge opts with default ops
         opts = { ...defaultOpts, ...opts };
         // Assign images
@@ -124,10 +137,78 @@ export class Renderer {
         // Render
         this.clear()
         this.renderPagination(cur, max)
-        this.renderImages(images_onscreen)
+        this.renderImages(images_onscreen, opts.size)
         this.renderPagination(cur, max)
         // Set state
         this.displaying = { ...opts, f: this.displayImages, images: images, images_onscreen: images_onscreen }
+    }
+
+    /**
+     * Filter (and optionally alter the score of) the currently displayed objects
+     * @param {function} filterFunction - function to filter the images. 
+     *      Should take images objects as the argument.
+     * @param {function} optionalScoreMapFunction - function to map the image scores (non-destructively). 
+     *      Should takes images objects as the argument and return a number.
+     */
+    filterDisplaying(filterFunction, optionalScoreMapFunction) {
+        if (!this.displaying || !this.displaying.images) {
+            throw new Error("Not currently displaying any images")
+        }
+        if (this.displaying.images_unfiltered === undefined) {
+            this.displaying.images_unfiltered = this.displaying.images
+        }
+        this.displaying.images = this.displaying.images_unfiltered.filter(filterFunction)
+        if (optionalScoreMapFunction !== undefined) {
+            this.displaying.images = this.displaying.images.map(
+                i => Object.assign(Object.assign({}, i), {score: optionalScoreMapFunction(i)})
+            ).sort((a, b) => b.score - a.score)
+        }
+        this.displaying.f.call(this, this.displaying)
+    }
+
+    /**
+     * Resize displayed images to another valid size, between 75 px and 1024 px
+     * @param {string|number} size - single character Flickr image size, or size in px. 
+     *      If invalid, show list 
+     */
+    resizeImages(size) {
+        const sizes = ["s", "q", "t", "m", "n", "w", "z", "c", "b"]
+        if (typeof size === 'number') {
+            size = {
+                75: 's',
+                150: 'q',
+                100: 't',
+                240: 'm',
+                320: 'n',
+                400: 'w',
+                500: '(none)',
+                640: 'z',
+                800: 'c',
+                1024: 'b'
+            }[size]
+        }
+        if (!sizes.includes(size)) {
+            console.warn("s	thumbnail	75	cropped square\n" +
+            "q	thumbnail	150	cropped square\n" +
+            "t	thumbnail	100\n" +
+            "m	small	240\n" +
+            "n	small	320\n" +
+            "w	small	400\n" +
+            "(none)	medium	500\n" +
+            "z	medium	640\n" +
+            "c	medium	800\n" +
+            "b	large	1024\n" +
+            "h	large	1600	has a unique secret\n" +
+            "k	large	2048	has a unique secret\n" +
+            "3k	extra large	3072	has a unique secret\n" +
+            "4k	extra large	4096	has a unique secret\n" +
+            "f	extra large	4096	has a unique secret; only exists for 2:1 aspect ratio photos\n" +
+            "5k	extra large	5120	has a unique secret\n" +
+            "6k	extra large	6144	has a unique secret\n")
+        } else {
+            this.displaying.image_size = size
+            this.displaying.f.call(this, this.displaying)
+        }
     }
 
     /**
@@ -157,11 +238,16 @@ export class Renderer {
     /**
      * Renders each of the given images in the render area
      * @param {Array} image_list - List of images to display
+     * @param {string} [size] (optional) - Flickr image size char
      * @returns {Renderer} - A reference to this Renderer
      */
-    renderImages(image_list) {
+    renderImages(image_list, size = undefined) {
         let newHTML = `<div class="flex">`;
         for (const img of image_list) {
+            let imgHTML = this.imageHTML(img);
+            if (size !== undefined) {
+                imgHTML = imgHTML.replace(/(\d+)_([a-f0-9]+)(_.)?\.jpg/, `$1_$2_${size}.jpg`)
+            }
             newHTML += this.imageHTML(img);
         }
         this.appendHTML(newHTML + `</div>`);
