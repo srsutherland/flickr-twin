@@ -137,7 +137,7 @@ export class Renderer {
         // Render
         this.clear()
         this.renderPagination(cur, max)
-        this.renderImages(images_onscreen, opts.size)
+        this.renderImages(images_onscreen, opts.image_size)
         this.renderPagination(cur, max)
         // Set state
         this.displaying = { ...opts, f: this.displayImages, images: images, images_onscreen: images_onscreen }
