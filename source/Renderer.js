@@ -248,7 +248,7 @@ export class Renderer {
             if (size !== undefined) {
                 imgHTML = imgHTML.replace(/(\d+)_([a-f0-9]+)(_.)?\.jpg/, `$1_$2_${size}.jpg`)
             }
-            newHTML += this.imageHTML(img);
+            newHTML += imgHTML;
         }
         this.appendHTML(newHTML + `</div>`);
         return this;
