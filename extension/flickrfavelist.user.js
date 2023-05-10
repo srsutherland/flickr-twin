@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2022.08.28
+// @version      2023.05.09
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
 // @match        https://www.flickr.com/*
+// @match        https://flickr.com/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_listValues
@@ -820,7 +821,11 @@
          */
         addCatPills () {
             this.catPillsEvent.adding = true
-            for (const elem of document.querySelectorAll(".photo-list-photo-view a.overlay")) {
+            //selector for photostream, favorites, albums, etc
+            const selector_masonry = ".photo-list-photo-view a.overlay"
+            //selector for galleries
+            const selector_gallery = ".photo-list-photo-container a.click-target"
+            for (const elem of document.querySelectorAll(`${selector_masonry}, ${selector_gallery}`)) {
                 const parent = elem.parentElement.parentElement.parentElement;
                 if (parent.querySelector(".ffl-catpill-contain")) {
                     continue;
@@ -1081,6 +1086,8 @@
         } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/i)) { //Favorites
             ffl = new FFLPhotoList()
         } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/albums\/\d+/i)) { //Album
+            ffl = new FFLPhotoList()
+        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/galleries\/\d+/i)) { //Gallery
             ffl = new FFLPhotoList()
         } else if (window.location.href.match(/flickr\.com\/people\/([^/]+)[$/]/i)) { //About page
             ffl = new FFLPhotoList()
