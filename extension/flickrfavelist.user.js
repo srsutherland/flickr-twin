@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2023.05.09
+// @version      2023.05.30
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -1073,23 +1073,39 @@
 
     /*** Main ***/
 
+    // regexes for matching Flickr URLs
+    const reDomain = "flickr\.com"
+    const reUserID = "([^/]+)"
+    const rePhotoID = "(\\d+)"
+    const reIsPhotoSizes = new RegExp(`${reDomain}/photos/${reUserID}/${rePhotoID}/sizes[/$]`, "i");
+    const reIsPhotoPage = new RegExp(`${reDomain}/photos/${reUserID}/${rePhotoID}[/$]`, "i");
+    const reIsUserPhotoStream = new RegExp(`${reDomain}/photos/${reUserID}($|/($|page\\d+|with))`, "i");
+    const reIsUserFavorites = new RegExp(`${reDomain}/photos/${reUserID}/favorites($|/($|page\\d+|with))`, "i");
+    const reIsAlbum = new RegExp(`${reDomain}/photos/${reUserID}/albums/\\d+`, "i");
+    const reIsGallery = new RegExp(`${reDomain}/photos/${reUserID}/galleries/\\d+`, "i");
+    const reIsUserAbout = new RegExp(`${reDomain}/people/${reUserID}[^/]`, "i");
+    const pageInfo = () => {
+        return {
+            isPhotoSizes: reIsPhotoSizes.test(window.location.href),
+            isPhotoPage: reIsPhotoPage.test(window.location.href),
+            isUserPhotoStream: reIsUserPhotoStream.test(window.location.href),
+            isUserFavorites: reIsUserFavorites.test(window.location.href),
+            isAlbum: reIsAlbum.test(window.location.href),
+            isGallery: reIsGallery.test(window.location.href),
+            isUserAbout: reIsUserAbout.test(window.location.href),
+        }
+    }
+
     const loadFFL = () => {
         let ffl
+        const page = pageInfo()
         if (window.location.href.match("srsutherland.github.io/flickr-twin/") || window.location.href.match(localhosturl)) {
             ffl = new FFLTwinApp()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)\/sizes[/$]/i)) { //Photo sizes page
+        } else if (page.isPhotoSizes) {
             ffl = new FFLPhotoSizes()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/(\d+)[/$]/i)) { //Photo page
+        } else if (page.isPhotoPage) {
             ffl = new FFLPhotoPage()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)($|\/($|page\d+|with))/i)) { //Photostream
-            ffl = new FFLPhotoList()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/favorites($|\/($|page\d+|with))/i)) { //Favorites
-            ffl = new FFLPhotoList()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/albums\/\d+/i)) { //Album
-            ffl = new FFLPhotoList()
-        } else if (window.location.href.match(/flickr\.com\/photos\/([^/]+)\/galleries\/\d+/i)) { //Gallery
-            ffl = new FFLPhotoList()
-        } else if (window.location.href.match(/flickr\.com\/people\/([^/]+)[$/]/i)) { //About page
+        } else if (page.isUserPhotoStream || page.isUserFavorites || page.isAlbum || page.isGallery || page.isUserAbout) {
             ffl = new FFLPhotoList()
         } else {
             ffl = new FlickrFaveList()
