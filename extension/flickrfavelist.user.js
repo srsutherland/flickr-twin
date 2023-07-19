@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2023.05.30
+// @version      2023.05.30.1
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -1074,7 +1074,7 @@
     /*** Main ***/
 
     // regexes for matching Flickr URLs
-    const reDomain = "flickr\.com"
+    const reDomain = "flickr\\.com"
     const reUserID = "([^/]+)"
     const rePhotoID = "(\\d+)"
     const reIsPhotoSizes = new RegExp(`${reDomain}/photos/${reUserID}/${rePhotoID}/sizes[/$]`, "i");
