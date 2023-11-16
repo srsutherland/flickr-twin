@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2023.05.30.1
+// @version      2023.11.15
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -68,7 +68,12 @@
          * Display a toast message
          */
         toast(msg) {
-            iqwerty.toast.toast(msg)
+            try {
+                // this script might be broken
+                iqwerty.toast.toast(msg)
+            } catch (e) {
+                console.warn("Failed toast:", msg)
+            }
         }
 
         /**
@@ -101,6 +106,9 @@
             for (const k of keys) {
                 exportObj[k] = GM_SuperValue.get(k, [])
             }
+            if (this.c.api.api_key) {
+                exportObj.api_key = this.c.api.api_key
+            }
             downloadObjectAsJson(exportObj, "ffl_export-" + new Date().toLocaleString('sv').replace(/ (\d+):(\d+):\d+/, "-$1$2"))
         }
     
@@ -110,6 +118,10 @@
          */
         import(settings_obj) {
             for (const [k,v] of Object.entries(settings_obj)) {
+                if (k === "api_key") {
+                    this.c.api.setAPIKey(v);
+                    continue;
+                }
                 GM_SuperValue.set(k, v)
             }
         }
@@ -197,7 +209,7 @@
                 sourceURLs[id] = url
                 GM_SuperValue.set("sourceURL", sourceURLs)
             } else if (sourceURLs[id] !== url) {
-                iqwerty.toast.toast(`SourceURL already in db as "${sourceURLs[id]}"`)
+                this.toast(`SourceURL already in db as "${sourceURLs[id]}"`)
             }
         }
 
@@ -290,7 +302,7 @@
                     await wait(50)
                 }
                 this.c = unsafeWindow.c
-                iqwerty.toast.toast('Controller loaded')
+                this.toast('Controller loaded')
             }
         }
 
@@ -315,7 +327,7 @@
                 this.c.idb.addPhoto(photo)
             }
             this.storedPhotoDBLength = db.length;
-            iqwerty.toast.toast('Photo info synced from extension')
+            this.toast('Photo info synced from extension')
         }
 
         /**
@@ -330,7 +342,7 @@
                 .filter(i => i) //remove nulls
                 .map(p => {return {id:p.id, owner:p.owner, secret:p.secret, server:p.server}})
             GM_SuperValue.set("db", newdb)
-            iqwerty.toast.toast('Photo info synced to extension')
+            this.toast('Photo info synced to extension')
         }
 
         /**
@@ -383,12 +395,18 @@
                 button.addEventListener('click', clickHandler)
                 document.getElementById("ffl-buttons").insertAdjacentElement("beforeend", button)
             }
+            this.addButton = addButton
             addButton("ffl-display-lists", "Display lists", () => { this.printLists(getChecked()) })
             addButton("ffl-paginate-lists", "Paginate lists", () => { this.c.r.displayImages({ids:allCheckedItems()}); })
             addButton("ffl-process-lists", "Process lists", () => { this.c.processPhotos(allCheckedItemsNo404()).then(() => this.updateScores()) })
             addButton("ffl-process-twins", "Smart process twins", () => { this.c.processUsersFromDBSmart(); })
             addButton("ffl-user-stats", "Display user stats", () => { this.printUserStats(); })
+            addButton("ffl-full-routine", "Full routine 10k", () => { this.fullRoutine(10000); })
             addButton("ffl-update-lists", "Update", () => { this.updateAll(); this.log(); this.hideAll(); this.pullPhotoInfo(); })
+            document.getElementById("ffl-buttons").insertAdjacentHTML("beforeend", `<p></p>`)
+            // Import, export
+            addButton("ffl-import", "Import FFL", () => { this.importFromFile(); })
+            addButton("ffl-export", "Export FFL", () => { this.export(); })
 
             document.head.insertAdjacentHTML("beforeend", 
             `<style>
@@ -762,7 +780,7 @@
                 if (!ok) {
                     this.addItem("e404", this.photoID)
                     this.addSourceUrl(this.photoID, this.url)
-                    iqwerty.toast.toast(`Added "${this.photoID}" to 404 ignore list`)
+                    this.toast(`Added "${this.photoID}" to 404 ignore list`)
                 }
             })
         }
