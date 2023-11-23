@@ -16,6 +16,7 @@ import { FlickrAPI } from "./FlickrAPI.js"
         this.queue = [];
         this.waitingForLimit = false;
         this.waitingForTimer = false;
+        this.interval = 100;
     }
 
     /**
@@ -54,11 +55,11 @@ import { FlickrAPI } from "./FlickrAPI.js"
             if (calls < this.max) {
                 this.waitingForLimit = false;
                 this.waitingForTimer = Date.now()
-                window.setTimeout(() => this.updateQueue(true), 100)
+                window.setTimeout(() => this.updateQueue(true), this.interval)
                 this.queue.shift().resolve()
             } else {
                 this.waitingForLimit = Date.now()
-                window.setTimeout(() => this.updateQueue(), 60000)
+                window.setTimeout(() => this.updateQueue(), 10000)
             }
         }
     }
