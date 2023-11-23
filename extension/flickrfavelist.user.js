@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2023.11.15
+// @version      2023.11.22
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -693,6 +693,26 @@
             await this.c.processUsersFromDBSmart(maxUserpageRequests);
             await this.c.r.displayImages();
         } 
+
+        /**
+         * Display images when the api will be waiting for long enough to make it worth it
+         * @param {number} minMinutes - minimum number of minutes until the next api call is available
+         */
+        async displayWhenReady(minMinutes=30) {
+            window.clearInterval(this.displayWhenReadyInterval)
+            const api = this.c.api
+            const ms_until_call_expires = api.call_history[0] + 60 * 60 * 1000 - Date.now();
+            const min_min_in_ms = minMinutes * 60 * 1000;
+            const used_all_calls = api.call_history.length == api.max;
+            const no_new_calls_for_x_minutes = ms_until_call_expires < min_min_in_ms;
+            if (used_all_calls && no_new_calls_for_x_minutes) {
+                console.log("displaying...")
+                this.c.r.displayImages()
+            } else {
+                console.log("Not done, waiting 10s")
+                this.displayWhenReadyInterval = window.setTimeout(() => this.displayWhenReady(), 10000)
+            }
+        }
     }
 
     /**
