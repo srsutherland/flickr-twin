@@ -2,6 +2,10 @@
  * Layer in charge of directly interacting with the HTML
  */
 export class Renderer {
+    /**
+     * Create a new Renderer
+     * @param {import ('./Controller').Controller} controller 
+     */
     constructor(controller) {
         this.c = controller;
         this.idb = controller.idb;
@@ -149,6 +153,7 @@ export class Renderer {
      *      Should take images objects as the argument.
      * @param {function} optionalScoreMapFunction - function to map the image scores (non-destructively). 
      *      Should takes images objects as the argument and return a number.
+     *      Sorts the list after applying.
      */
     filterDisplaying(filterFunction, optionalScoreMapFunction) {
         if (!this.displaying || !this.displaying.images) {
@@ -157,8 +162,10 @@ export class Renderer {
         if (this.displaying.images_unfiltered === undefined) {
             this.displaying.images_unfiltered = this.displaying.images
         }
-        this.displaying.images = this.displaying.images_unfiltered.filter(filterFunction)
-        if (optionalScoreMapFunction !== undefined) {
+        if (filterFunction) {
+            this.displaying.images = this.displaying.images_unfiltered.filter(filterFunction)
+        }
+        if (optionalScoreMapFunction) {
             this.displaying.images = this.displaying.images.map(
                 i => Object.assign(Object.assign({}, i), {score: optionalScoreMapFunction(i)})
             ).sort((a, b) => b.score - a.score)
