@@ -75,9 +75,10 @@ export class Renderer {
 
     /**
      * Print the top result for user twins to the console
-     * @param {number} max_count - Number of users to print
+     * @param {number} max_count - Number of users to print (default: 30)
+     * @param {boolean} recalculate - recalculate scores before printing (default: true)
      */
-    print_results(max_count = 30) {
+    print_results(max_count = 30, recalculate=true) {
         let twins_list = this.udb.sortedList(max_count);
 
         for (const twin of twins_list) {
@@ -88,10 +89,28 @@ export class Renderer {
         }
     }
 
+    /**
+     * Main function to display images. Takes an object with the following properties:
+     * @param {Object} opts - Options object
+     * @param {Array[Object]} [opts.images] - List of image objects to display. If directly provided, skips mode selection
+     * @param {number} [opts.page] - Page number to display
+     * @param {number} [opts.per_page] - Number of images to display per page
+     * @param {boolean} [opts.recalculate] - Recalculate scores before displaying
+     * @param {string} [opts.mode] - Mode of display. Has the following options:
+     *  - "all" - Display all images
+     *  - "excluding" - Display all images excluding hidden images
+     *  - "by_id" - Display images by id
+     *  - "default" - Display images excluding hidden images, with a minimum favecount. Default if no other mode is triggered
+     * @param {boolean} [opts.all] - Display all images. The same as setting mode to "all"
+     * @param {boolean} [opts.excluding] - Display all images excluding hidden images. The same as setting mode to "excluding"
+     * @param {Array[string]} [opts.ids] - List of image ids to display. If provided, sets mode to "by_id"
+     * @param {string} [opts.image_size] - A single character Flickr image size, or size in px. (@see resizeImages() for more info)
+     */
     displayImages(opts = {}) {
         const defaultOpts = {
             page: 1,
-            per_page: 20
+            per_page: 20,
+            recalculate: true,
         };
         // Guess input if opts is an array
         if (Array.isArray(opts)) {
@@ -115,15 +134,15 @@ export class Renderer {
                 images = [...opts.ids].map(id => this.idb.get(id))
                 opts.mode = "by_id"
             } else if (opts.excluding || opts.mode == "excluding") {
-                images = this.idb.sortedListExcluding(this.c.getHidden());
+                images = this.idb.sortedListExcluding(this.c.getHidden(), calculateScores=opts.recalculate);
                 opts.mode = "excluding"
             } else if (opts.all || opts.mode == "all") {
-                this.udb.calculateScores()
-                images = this.idb.sortedList()
+                if (opts.recalculate) { this.udb.calculateScores() }
+                images = this.idb.sortedList(calculateScores=opts.recalculate)
                 opts.mode = "all"
             } else {
                 this.udb.calculateScores()
-                images = this.idb.sortedListExcluding(this.c.getHidden())
+                images = this.idb.sortedListExcluding(this.c.getHidden(), calculateScores=opts.recalculate)
                 const minfavecount = images[0]?.favecount / 5
                 if (images[0]?.favecount > 2) {
                     images = images.filter(i => i.favecount > minfavecount);

@@ -92,11 +92,12 @@ class FavesDatabase {
      * Returns an Array of the contents of the db, sorted by fave count (highest first)
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
+     * @param {boolean} calculate_scores - If true, recalculate scores before sorting. Defaults to true.
      * @returns {Array} - The sorted Array
      */
-    sortedList(max_count, starting_from = 0) {
+    sortedList(max_count, starting_from = 0, calculate_scores = true) {
         const end = max_count ? starting_from + max_count : undefined;
-        this.calculateScores()
+        if (calculate_scores) { this.calculateScores(); };
         return this.values()
             .sort((a, b) => { return b.score - a.score; })
             .slice(starting_from, end);
@@ -107,11 +108,12 @@ class FavesDatabase {
      * @param {Array | Set} exclude_list - Set or list of items to exclude from the list. 
      * @param {number} max_count - Maximum number of items in the list. If omitted, returns the whole list.
      * @param {number} starting_from - Index to start from when slicing the list (for pagination). Defaults to 0.
+     * @param {boolean} calculate_scores - If true, recalculate scores before sorting. Defaults to true.
      * @returns {Array} - The sorted Array
      */
-    sortedListExcluding(exclude_list, max_count, starting_from = 0) {
+    sortedListExcluding(exclude_list, max_count, starting_from = 0, calculate_scores = true) {
         const end = max_count ? starting_from + max_count : undefined;
-        this.calculateScores()
+        if (calculate_scores) { this.calculateScores(); };
         return this
             .excluding(exclude_list)
             .sort((a, b) => { return b.score - a.score; })
