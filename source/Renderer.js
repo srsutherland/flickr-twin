@@ -79,7 +79,7 @@ export class Renderer {
      * @param {boolean} recalculate - recalculate scores before printing (default: true)
      */
     print_results(max_count = 30, recalculate=true) {
-        let twins_list = this.udb.sortedList(max_count, calculate_scores=recalculate);
+        let twins_list = this.udb.sortedList(max_count, 0, recalculate);
 
         for (const twin of twins_list) {
             const favecount = twin.favecount;
@@ -134,15 +134,15 @@ export class Renderer {
                 images = [...opts.ids].map(id => this.idb.get(id))
                 opts.mode = "by_id"
             } else if (opts.excluding || opts.mode == "excluding") {
-                images = this.idb.sortedListExcluding(this.c.getHidden(), calculate_scores=opts.recalculate);
+                images = this.idb.sortedListExcluding(this.c.getHidden(), null, 0, opts.recalculate);
                 opts.mode = "excluding"
             } else if (opts.all || opts.mode == "all") {
                 if (opts.recalculate) { this.udb.calculateScores() }
-                images = this.idb.sortedList(calculate_scores=opts.recalculate)
+                images = this.idb.sortedList(null, 0, opts.recalculate)
                 opts.mode = "all"
             } else {
                 this.udb.calculateScores()
-                images = this.idb.sortedListExcluding(this.c.getHidden(), calculate_scores=opts.recalculate)
+                images = this.idb.sortedListExcluding(this.c.getHidden(), null, 0, opts.recalculate)
                 const minfavecount = images[0]?.favecount / 5
                 if (images[0]?.favecount > 2) {
                     images = images.filter(i => i.favecount > minfavecount);
