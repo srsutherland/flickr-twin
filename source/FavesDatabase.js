@@ -59,6 +59,10 @@ class FavesDatabase {
         return Object.entries(this.db)
     }
 
+    /**
+     * Returns the number of items in the db
+     * @returns {number}
+     */
     size() {
         return Object.keys(this.db).length
     }
@@ -97,7 +101,7 @@ class FavesDatabase {
      */
     sortedList(max_count, starting_from = 0, calculate_scores = true) {
         const end = max_count ? starting_from + max_count : undefined;
-        if (calculate_scores) { this.calculateScores(); };
+        if (calculate_scores) { this.calculateScores(); }
         return this.values()
             .sort((a, b) => { return b.score - a.score; })
             .slice(starting_from, end);
@@ -113,7 +117,7 @@ class FavesDatabase {
      */
     sortedListExcluding(exclude_list, max_count, starting_from = 0, calculate_scores = true) {
         const end = max_count ? starting_from + max_count : undefined;
-        if (calculate_scores) { this.calculateScores(); };
+        if (calculate_scores) { this.calculateScores(); }
         return this
             .excluding(exclude_list)
             .sort((a, b) => { return b.score - a.score; })
@@ -231,6 +235,28 @@ export class UserDatabase extends FavesDatabase {
             this.get(nsid).faves[photo_id] = person.favedate;
             this.get(nsid).favecount += 1;
         }
+    }
+
+    /**
+     * Find the first user with a matching username or realname
+     * @param {string} name - username or realname to search for
+     * @returns {Object} user object
+     */
+    find(name) {
+        return this.findAll(name).pop();
+    }
+
+    /**
+     * Find all users with a matching username or realname
+     * @param {string} name - username or realname to search for 
+     * @returns {Array} - Array of user objects
+     */
+    findAll(name) {
+        return this.values().filter(
+            (user) => 
+                user.username.toLowerCase().includes(name.toLowerCase()) 
+                || user.realname.toLowerCase().includes(name.toLowerCase())
+        )
     }
 }
 
