@@ -24,7 +24,7 @@ export class Controller {
      * Takes a list of photo ids and queries which users have favorited them,
      * then records those users into the udb, keeping track of which and how many 
      * photos were favorited for each user. 
-     * Uses api.getImageFavorites() (flickr.photos.getFavorites)
+     * Uses @see api.getImageFavorites() (flickr.photos.getFavorites)
      * @param {(string[]|string)} photo_ids - an array of photo ids or a single photo id
      */
     async processPhotos(photo_ids) {
@@ -59,7 +59,7 @@ export class Controller {
 
     /**
      * Take a list of user ids and queries their favorite photos, recording that data in the idb
-     * Uses api.getUserFavorites() (flickr.favorites.getPublicList)
+     * Uses @see api.getUserFavorites() (flickr.favorites.getPublicList)
      * @param {(string[]|string)} user_ids - an array of user ids or a single user id
      */
     async processUsers(user_ids) {
@@ -125,8 +125,8 @@ export class Controller {
 
     /**
      * Query the favorite photos of the given user and then process them
-     * Uses api.getUserFavorites() (flickr.favorites.getPublicList)
-     * Uses api.getImageFavorites() (flickr.photos.getFavorites)
+     * Uses @see api.getUserFavorites() (flickr.favorites.getPublicList)
+     * Uses @see api.getImageFavorites() (flickr.photos.getFavorites)
      * @param {string} user_id 
      */
     async processPhotosFromUser(user_id) {
@@ -254,7 +254,7 @@ export class Controller {
 
     /**
      * Make sure the specified photos are loaded into idb so you can display them
-     * Uses api.getPhotoInfo() (flickr.photos.getInfo)
+     * Uses @see api.getPhotoInfo() (flickr.photos.getInfo)
      * @param {Array} photo_ids - List of photo ids to load
      */
     async loadPhotos(photo_ids) {
