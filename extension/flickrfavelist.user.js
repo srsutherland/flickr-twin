@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2023.11.22
+// @version      2024.02.22
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
 // @match        https://www.flickr.com/*
 // @match        https://flickr.com/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=flickr.com
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_listValues
@@ -267,6 +268,10 @@
                 this.weights[cat] = this.weights[cat] || 1
             }
             this.storedPhotoDBLength = 0;
+            /**
+             * @type {import ('../source/Controller').Controller} c
+             */
+            this.c = undefined
             this.awaitController().then(() => {
                 this.hideAll();
                 this.pushPhotoInfo();
@@ -407,6 +412,8 @@
             // Import, export
             addButton("ffl-import", "Import FFL", () => { this.importFromFile(); })
             addButton("ffl-export", "Export FFL", () => { this.export(); })
+            const version_text = `FFL version ${GM_info.script.version}`
+            addButton("ffl-version", version_text, () => { this.updateAll(); this.log(); })
 
             document.head.insertAdjacentHTML("beforeend", 
             `<style>
@@ -658,25 +665,28 @@
             await this.awaitController()
             this.c.r.clear()
             //html is built piecemeal before appending because otherwise Chrome "helpfully" closes the tags for you
-            let newHTML = `<table><tr><th></th>`
+            let newHTML = `<table style="text-align:center"><tr><th></th><th></th>`
             for (const cat of categories) {
                 newHTML += (`<th> ${cat.replace(/_/g, '_<wbr/>')} </th>`)
             }
-            newHTML += (`<th>pages processed</th><th>total pages</th><th>faves processed</th><th>total faves</th><th>score</th>`)
-            for (const u of this.c.udb.sortedList(num)) {
+            newHTML += (`<th title="(processed/total)">pages of 500</th><th title="(processed/total)">all faves</th><th>score</th>`)
+            for (const u of this.c.udb.sortedList(num, 0, false)) {
                 newHTML += (`<tr><td>${this.c.r.userHTML(u)}</td>`)
+                newHTML += (`<td>${u.nsid}</td>`)
                 for (const cat of this.categories) {
                     const ls = this.lists[cat]
                     newHTML += (`<td title="${cat}">${ls.map(id => this.c.idb.get(id)).filter(i => i?.faved_by.includes(u.nsid)).length}</td>`)
                 }
-                newHTML += (`<td title="pages processed">${u.pages_processed || "?"}</td>`)
-                newHTML += (`<td title="total pages">${u.pages || "?"}</td>`)
-                newHTML += (`<td title="faves processed">${u.faves_processed || "?"}</td>`)
-                newHTML += (`<td title="total faves">${u.faves_total || "?"}</td>`)
-                newHTML += (`<td title="score">${u.score}</td>`)
+                newHTML += (`<td title="pages (processed/total)">${u.pages_processed || "?"}/${u.pages || "?"}</td>`)
+                newHTML += (`<td title="faves (processed/total)">${u.faves_processed || "?"}/${u.faves_total || "?"}</td>`)
+                const score_to_2dp = Math.round((u.score + Number.EPSILON) * 100) / 100
+                newHTML += (`<td title="score">${score_to_2dp}</td>`)
                 newHTML += (`</tr>`)
             }
-            this.c.r.appendHTML(newHTML + `</table>`)
+            newHTML += `</table>`
+            newHTML += `<p><button id="ffl-userstats-loadmore">Load more</button></p>`
+            this.c.r.appendHTML(newHTML)
+            document.getElementById("ffl-userstats-loadmore").addEventListener('click', () => this.printUserStats(num+20))
         }
 
         /**
