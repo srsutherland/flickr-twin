@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2024.02.22
+// @version      2024.09.26
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -253,6 +253,17 @@
                 }
             }
             return false;
+        }
+
+        /**
+         * Create a new list category
+         * @param {string} category 
+         */
+        createList(category) {
+            category = category.replace(/ /g, "_")
+            this.categories.push(category)
+            GM_SuperValue.set("categories", this.categories)
+            this.updateList(category)
         }
     }
 
@@ -749,9 +760,13 @@
 
         /**
          * Create the ffl control panel under the image with buttons to add and remove it from categories
+         *      If the control panel already exists, re-render it
          */
         createControlPanel() {
             try {
+                if (this.cp) {
+                    this.cp.remove()
+                }
                 this.cp = document.createElement("div")
                 this.cp.id = "ffl_control_panel"
                 const underPhoto = document.querySelector(".sub-photo-container.centered-content")
@@ -774,6 +789,17 @@
                         }
                     })
                 }
+                // Add new list button
+                this.cp.insertAdjacentHTML("beforeend", ` <button class="ffl-cat-button" id="new-list-button">+</button>`)
+                const newButton = document.getElementById("new-list-button")
+                newButton.addEventListener('click', () => {
+                    const newCat = prompt("Enter new category name")
+                    if (newCat) {
+                        this.createList(newCat)
+                        this.createControlPanel()
+                    }
+                })
+                // Styles
                 document.head.insertAdjacentHTML("beforeend",
                     `<style>
                     .ffl-cat-selected {
