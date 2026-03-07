@@ -151,10 +151,6 @@ export class FlickrAPI {
      * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getImageFavorites(photo_id, page = 1) {
-        // const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
-        // const method = "&method=flickr.photos.getFavorites&per_page=50";
-        // const rest_url = `${baseurl}${method}&photo_id=${photo_id}&page=${page}&api_key=${this.api_key}`;
-        // const response_json = await this.fetchJSON(rest_url)
         const response_json = await this.call({
             method: "flickr.photos.getFavorites",
             per_page: 50,
@@ -174,10 +170,6 @@ export class FlickrAPI {
      * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getUserFavorites(user_id, page = 1) {
-        // const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
-        // const method = "&method=flickr.favorites.getPublicList&per_page=500";
-        // const rest_url = `${baseurl}${method}&user_id=${user_id}&page=${page}&api_key=${this.api_key}`;
-        // const response_json = await this.fetchJSON(rest_url)
         const response_json = await this.call({
             method: "flickr.favorites.getPublicList",
             per_page: 500,
@@ -196,10 +188,6 @@ export class FlickrAPI {
      * @returns {Object} - Parsed and unwrapped version of the json response
      */
     async getPhotoInfo(photo_id) {
-        // const baseurl = "https://www.flickr.com/services/rest/?format=json&nojsoncallback=1";
-        // const method = "&method=flickr.photos.getInfo";
-        // const rest_url = `${baseurl}${method}&photo_id=${photo_id}&api_key=${this.api_key}`;
-        // const response_json = await this.fetchJSON(rest_url)
         const response_json = await this.call({
             method: "flickr.photos.getInfo",
             photo_id: photo_id
