@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2024.09.26
+// @version      2026.03.07
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -32,14 +32,63 @@
     // @match        http://localhost:8000
 
     /**
+     * Get and set values with GM_SuperValue,
+     * and record when a value was undefined 
+     * to prevent overwriting with empty containers on data errors.
+     */
+    class GM_SafeValue {
+        // Keep track of keys that were undefined when loaded
+        static loaded_undefined = {};
+
+        /**
+         * Use GM_SuperValue to get a value, returning a default if the value is undefined.
+         * Record if the value is undefined to prevent accidental overwriting with empty containers on data errors.
+         * @param {string} key 
+         * @param {*} defaultValue 
+         * @returns * The requested value or default
+         */
+        static get(key, defaultValue) {
+            const value = GM_SuperValue.get(key)
+            if (value === undefined) {
+                this.loaded_undefined[key] = true;
+                return defaultValue;
+            }
+            return value;
+        }
+
+        /**
+         * Use GM_SuperValue to set a value, 
+         * preventing overwriting of previously undefined values with empty containers.
+         * @param {string} key 
+         * @param {*} value 
+         * @returns 
+         */
+        static set(key, value) {
+            const wasUndefined = this.loaded_undefined[key]
+            if (wasUndefined) {
+                const isEmptyArray = Array.isArray(value) && value.length === 0
+                const isEmptyObject = typeof value === "object" && value !== null && Object.keys(value).length === 0
+                if (isEmptyArray || isEmptyObject || value === undefined) {
+                    console.warn(
+                        `Attempted to overwrite "${key}" with "${value}" but it was previously undefined. `+ 
+                        "Operation aborted to prevent data loss."
+                    );
+                    return;
+                }
+            }
+            GM_SuperValue.set(key, value)
+        }
+    }
+
+    /**
      * Base Extension Class
      */
     class FlickrFaveList {
         constructor() {
-            this.categories = GM_SuperValue.get("categories", [])
-            this.subcategories = GM_SuperValue.get("subcategories", [])
+            this.categories = GM_SafeValue.get("categories", [])
+            this.subcategories = GM_SafeValue.get("subcategories", [])
             this.lists = {};
-            this.weights = GM_SuperValue.get("weights", {})
+            this.weights = GM_SafeValue.get("weights", {})
             this.updateAll()
             this.log()
         }
@@ -83,7 +132,7 @@
          * @returns {Array} - The updated list
          */
         updateList(category) {
-            this.lists[category] = GM_SuperValue.get(category, [])
+            this.lists[category] = GM_SafeValue.get(category, [])
             return this.lists[category];
         }
 
@@ -105,7 +154,7 @@
             const keys = ["categories", "subcategories", ...this.categories, ...this.subcategories, "weights", "sourceURL", "db"]
             let exportObj = {}
             for (const k of keys) {
-                exportObj[k] = GM_SuperValue.get(k, [])
+                exportObj[k] = GM_SafeValue.get(k, [])
             }
             if (this.c.api.api_key) {
                 exportObj.api_key = this.c.api.api_key
@@ -123,6 +172,7 @@
                     this.c.api.setAPIKey(v);
                     continue;
                 }
+                // This intentionally does not use GM_SafeValue
                 GM_SuperValue.set(k, v)
             }
         }
@@ -136,7 +186,8 @@
 
         retrieve(GM_key) {
             if (GM_key != undefined) {
-                return GM_SuperValue.get(GM_key, undefined)
+                // Intentionally does not use GM_SafeValue
+                return GM_SuperValue.get(GM_key)
             } else {
                 return GM_listValues()
             }
@@ -155,7 +206,7 @@
             const ls = this.updateList(category)
             if (!ls.includes(id)) {
                 const len = ls.push(id)
-                GM_SuperValue.set(category, ls)
+                GM_SafeValue.set(category, ls)
                 return len
             } else {
                 return -1;
@@ -176,7 +227,7 @@
             const ndx = ls.indexOf(id)
             if (ndx !== -1) {
                 const newList = ls.filter(i => i !== id)
-                GM_SuperValue.set(category, newList)
+                GM_SafeValue.set(category, newList)
             }
             return ndx;
         }
@@ -189,7 +240,7 @@
             for (const category of this.categories) {
                 const ls = this.updateList(category)
                 const newList = ls.filter(i => i !== null)
-                GM_SuperValue.set(category, newList)
+                GM_SafeValue.set(category, newList)
                 this.lists[category] = newList;
             }
         }
@@ -205,10 +256,10 @@
         addSourceUrl(id, url) {
             assertIsString(id)
             assertIsString(url)
-            const sourceURLs = GM_SuperValue.get("sourceURL", {})
+            const sourceURLs = GM_SafeValue.get("sourceURL", {})
             if (sourceURLs[id] == undefined) {
                 sourceURLs[id] = url
-                GM_SuperValue.set("sourceURL", sourceURLs)
+                GM_SafeValue.set("sourceURL", sourceURLs)
             } else if (sourceURLs[id] !== url) {
                 this.toast(`SourceURL already in db as "${sourceURLs[id]}"`)
             }
@@ -230,7 +281,7 @@
                     log(`"${id}" in "${cat}" at position ${ndx} of ${this.lists[cat].length}`)
                 }
             }
-            const sourceURL = GM_SuperValue.get("sourceURL", {})[id]
+            const sourceURL = GM_SafeValue.get("sourceURL", {})[id]
             if (sourceURL) {
                 rvalue.push({sourceURL: sourceURL})
                 log(`Original URL: "${sourceURL}"`)
@@ -260,9 +311,28 @@
          * @param {string} category 
          */
         createList(category) {
-            category = category.replace(/ /g, "_")
+            function escapeHtml(str) {
+                return str.replace(/ /g, "_").replace(/&/g,'&amp;')
+                .replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+            }
+            // Note that categories containing escaped entities will escaped keys
+            category = escapeHtml(category)
+            // If it matches an reserved key (categories, subcategories, weights, sourceURL, db), abort
+            if (["categories", "subcategories", "weights", "sourceURL", "db"].includes(category)) {
+                const msg = `Category name "${category}" is reserved. Please choose a different name.`
+                this.toast(msg)
+                console.warn(msg)
+                return;
+            }
+            if (this.categories.includes(category)) {
+                const msg = `Category name "${category}" already exists. Please choose a different name.`
+                this.toast(msg)
+                console.warn(msg)
+                return;
+            }
             this.categories.push(category)
-            GM_SuperValue.set("categories", this.categories)
+            GM_SafeValue.set("categories", this.categories)
             this.updateList(category)
         }
     }
@@ -274,7 +344,7 @@
     class FFLTwinApp extends FlickrFaveList {
         constructor() {
             super()
-            this.weights = GM_SuperValue.get("weights", {})
+            this.weights = GM_SafeValue.get("weights", {})
             for (const cat of this.categories) {
                 this.weights[cat] = this.weights[cat] || 1
             }
@@ -338,7 +408,7 @@
          */
         async pushPhotoInfo() {
             await this.awaitController()
-            const db = GM_SuperValue.get("db", [])
+            const db = GM_SafeValue.get("db", [])
             for (const photo of db) {
                 this.c.idb.addPhoto(photo)
             }
@@ -357,7 +427,7 @@
                 .map(i => this.c.idb.get(i))
                 .filter(i => i) //remove nulls
                 .map(p => {return {id:p.id, owner:p.owner, secret:p.secret, server:p.server}})
-            GM_SuperValue.set("db", newdb)
+            GM_SafeValue.set("db", newdb)
             this.toast('Photo info synced to extension')
         }
 
@@ -398,7 +468,7 @@
 
             const getWeights = () => Object.fromEntries([...weightsForm.elements].map(e=>[e.name, Number(e.value) || 0]))
             this.getWeights = getWeights
-            const setWeights = () => { this.weights = getWeights(); GM_SuperValue.set("weights", this.weights) }
+            const setWeights = () => { this.weights = getWeights(); GM_SafeValue.set("weights", this.weights) }
             for (const input of weightsForm.elements) {
                 input.addEventListener("input", setWeights)
             }
@@ -1206,5 +1276,40 @@
                 }
             })).observe(targetNode, observerOptions);
         }
+    }
+
+    //Debug tools
+    unsafeWindow.ffl_test = {
+        pageInfo,
+        urlExists,
+        getJsonUpload,
+        downloadObjectAsJson
+    }
+    unsafeWindow.ffl_test.SuperValue_Test = () => {
+        // Test all values that rely on GM_SuperValue, without defaults
+        const get_and_log = key => {
+            const value = GM_SuperValue.get(key)
+            console.log(`${key}:`, value)
+            return value
+        }
+        const cats = get_and_log("categories")
+        if (!cats) { return }
+        const lists = {}
+        for (const cat of cats) {
+            lists[cat] = get_and_log(cat)
+        }
+        return {
+            categories: cats,
+            lists
+        }
+    }
+    unsafeWindow.ffl_test.SuperValue_Get = (key, defaultValue) => {
+        const value = GM_SuperValue.get(key, defaultValue)
+        console.log(`${key}:`, value)
+        return value
+    }
+    unsafeWindow.ffl_test.SuperValue_Set = (key, value) => {
+        GM_SuperValue.set(key, value)
+        console.log(`Set ${key} to`, value)
     }
 })();
