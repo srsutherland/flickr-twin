@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flickr Fave List
 // @namespace    https://srsutherland.github.io/flickr-twin/
-// @version      2026.03.07
+// @version      2026.03.08
 // @description  Companion to flickr twin finder to maintain multiple lists
 // @author       srsutherland
 // @match        https://srsutherland.github.io/flickr-twin/*
@@ -968,8 +968,12 @@
             //selector for photostream, favorites, albums, etc
             const selector_masonry = ".photo-list-photo-view a.overlay"
             //selector for galleries
-            const selector_gallery = ".photo-list-photo-container a.click-target"
-            for (const elem of document.querySelectorAll(`${selector_masonry}, ${selector_gallery}`)) {
+            const selector_gallery_old = ".photo-list-photo-container a.click-target"
+            const selector_gallery = ".photo-list-view a.photo-link"
+            const photo_links = document.querySelectorAll(
+                [selector_masonry, selector_gallery, selector_gallery_old].join(", ")
+            )
+            for (const elem of photo_links) {
                 const parent = elem.parentElement.parentElement.parentElement;
                 if (parent.querySelector(".ffl-catpill-contain")) {
                     continue;
@@ -987,7 +991,6 @@
                     }
                 }
             }
-            this.catPillsEvent.adding = false;
         }
 
         /**
@@ -1220,40 +1223,54 @@
     // regexes for matching Flickr URLs
     const reDomain = "flickr\\.com"
     const reUserID = "([^/]+)"
+    const reUserPhotos = "photos/" + reUserID
     const rePhotoID = "(\\d+)"
-    const reIsPhotoSizes = new RegExp(`${reDomain}/photos/${reUserID}/${rePhotoID}/sizes[/$]`, "i");
-    const reIsPhotoPage = new RegExp(`${reDomain}/photos/${reUserID}/${rePhotoID}[/$]`, "i");
-    const reIsUserPhotoStream = new RegExp(`${reDomain}/photos/${reUserID}($|/($|page\\d+|with))`, "i");
-    const reIsUserFavorites = new RegExp(`${reDomain}/photos/${reUserID}/favorites($|/($|page\\d+|with))`, "i");
-    const reIsAlbum = new RegExp(`${reDomain}/photos/${reUserID}/albums/\\d+`, "i");
-    const reIsGallery = new RegExp(`${reDomain}/photos/${reUserID}/galleries/\\d+`, "i");
-    const reIsUserAbout = new RegExp(`${reDomain}/people/${reUserID}[^/]`, "i");
+    const appURL = "srsutherland.github.io/flickr-twin/"
+    const flickrRE = (root, rest) => new RegExp(`${reDomain}/${root}/${rest}`, "i")
+    // Create them
+    const reIsAppPage = new RegExp(appURL)
+    const reIsLocalAppPage = new RegExp(localhosturl)
+    const reIsPhotoSizes =      flickrRE(reUserPhotos, `${rePhotoID}/sizes($|/)`)
+    const reIsPhotoPage =       flickrRE(reUserPhotos, `${rePhotoID}($|/)`)
+    const reIsUserPhotoStream = flickrRE(reUserPhotos, `?($|/page\\d+|/with)`)
+    const reIsUserFavorites =   flickrRE(reUserPhotos, `favorites($|/($|page\\d+|with))`)
+    const reIsAlbum =           flickrRE(reUserPhotos, `albums/\\d+`)
+    const reIsGallery =         flickrRE(reUserPhotos, `galleries/\\d+`)
+    const reIsUserAbout =       flickrRE("people", `${reUserID}/?$`)
+    const reIsSearch =          flickrRE("search", "")
     const pageInfo = () => {
-        return {
-            isPhotoSizes: reIsPhotoSizes.test(window.location.href),
-            isPhotoPage: reIsPhotoPage.test(window.location.href),
-            isUserPhotoStream: reIsUserPhotoStream.test(window.location.href),
-            isUserFavorites: reIsUserFavorites.test(window.location.href),
-            isAlbum: reIsAlbum.test(window.location.href),
-            isGallery: reIsGallery.test(window.location.href),
-            isUserAbout: reIsUserAbout.test(window.location.href),
+        const reTest = re => re.test(window.location.href)
+        const page = {
+            isAppPage: reTest(reIsAppPage) || reTest(reIsLocalAppPage),
+            isPhotoSizes: reTest(reIsPhotoSizes),
+            isPhotoPage: reTest(reIsPhotoPage),
+            isUserPhotoStream: reTest(reIsUserPhotoStream),
+            isUserFavorites: reTest(reIsUserFavorites),
+            isAlbum: reTest(reIsAlbum),
+            isGallery: reTest(reIsGallery),
+            isUserAbout: reTest(reIsUserAbout),
+            isSearch: reTest(reIsSearch)
         }
+        page.isSomePhotoList = page.isUserPhotoStream || page.isUserFavorites || page.isAlbum || 
+            page.isGallery || page.isUserAbout || page.isSearch
+        return page
     }
 
     const loadFFL = () => {
         let ffl
         const page = pageInfo()
-        if (window.location.href.match("srsutherland.github.io/flickr-twin/") || window.location.href.match(localhosturl)) {
+        if (page.isAppPage) {
             ffl = new FFLTwinApp()
         } else if (page.isPhotoSizes) {
             ffl = new FFLPhotoSizes()
         } else if (page.isPhotoPage) {
             ffl = new FFLPhotoPage()
-        } else if (page.isUserPhotoStream || page.isUserFavorites || page.isAlbum || page.isGallery || page.isUserAbout) {
+        } else if (page.isSomePhotoList) {
             ffl = new FFLPhotoList()
         } else {
             ffl = new FlickrFaveList()
         }
+        ffl.page_info = page
         unsafeWindow.ffl = ffl
         window.ffl_lasthref = window.location.href;
     }
